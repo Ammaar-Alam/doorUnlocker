@@ -15,7 +15,6 @@ app.post("/command", (req, res) => {
 
 app.get("/getCommand", (req, res) => {
   res.send(latestCommand);
-  latestCommand = ""; // Clear the command after sending to Arduino
 });
 
 const PORT = process.env.PORT || 3000;
