@@ -14,8 +14,10 @@ app.get("/command", async (req, res) => {
   try {
     // Send the command to the Arduino
     const arduinoIP = "10.9.89.166"; // Replace with your Arduino's IP address
-    await axios.get(`http://${arduinoIP}/${command}`);
-    res.send(`Command ${command} sent successfully`);
+    const response = await axios.get(`http://${arduinoIP}/${command}`);
+    res.send(
+      `Command ${command} sent successfully. Arduino responded with: ${response.data}`,
+    );
   } catch (error) {
     console.error(`Error sending command to Arduino: ${error}`);
     res.status(500).send("Error sending command to Arduino");
