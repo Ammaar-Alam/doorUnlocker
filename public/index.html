@@ -6,7 +6,7 @@
             const thingId = "3420f1e7-f743-4d7d-91df-ea746d4f01e0";
             const propertyId = "05522adb-784b-4edf-8855-2baf1e132187";
             const proxyServerUrl =
-                "https://proxy-server-alam-ec4f553c366a.herokuapp.com/";
+                "https://proxy-server-alam-ec4f553c366a.herokuapp.com";
 
             async function sendCommand(command) {
                 try {
@@ -15,6 +15,7 @@
                         headers: {
                             "Content-Type": "application/json",
                         },
+                        body: JSON.stringify({}),
                     });
 
                     if (!tokenResponse.ok) {
