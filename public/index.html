@@ -4,7 +4,13 @@
         <title>Door Control</title>
         <script>
             function sendCommand(command) {
-                fetch(`/command?cmd=${command}`)
+                fetch("/command", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ command: command }),
+                })
                     .then((response) => response.text())
                     .then((data) => console.log(data))
                     .catch((error) => console.error("Error:", error));

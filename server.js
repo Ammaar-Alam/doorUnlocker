@@ -1,27 +1,21 @@
 const express = require("express");
-const axios = require("axios");
+const bodyParser = require("body-parser");
 
 const app = express();
+app.use(bodyParser.json());
+app.use(express.static("public")); // Serve the control interface
 
-// Serve the control interface
-app.use(express.static("public"));
+let latestCommand = "";
 
-// Endpoint to receive commands
-app.get("/command", async (req, res) => {
-  const command = req.query.cmd;
-  console.log(`Received command: ${command}`);
+app.post("/command", (req, res) => {
+  latestCommand = req.body.command;
+  console.log(`Received command: ${latestCommand}`);
+  res.send(`Command ${latestCommand} received`);
+});
 
-  try {
-    // Send the command to the Arduino
-    const arduinoIP = "10.9.89.166"; // Replace with your Arduino's IP address
-    const response = await axios.get(`http://${arduinoIP}/${command}`);
-    res.send(
-      `Command ${command} sent successfully. Arduino responded with: ${response.data}`,
-    );
-  } catch (error) {
-    console.error(`Error sending command to Arduino: ${error}`);
-    res.status(500).send("Error sending command to Arduino");
-  }
+app.get("/getCommand", (req, res) => {
+  res.send(latestCommand);
+  latestCommand = ""; // Clear the command after sending to Arduino
 });
 
 const PORT = process.env.PORT || 3000;
