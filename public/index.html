@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Door Control</title>
+        <script>
+            function sendCommand(command) {
+                fetch(`/command?cmd=${command}`)
+                    .then((response) => response.text())
+                    .then((data) => console.log(data))
+                    .catch((error) => console.error("Error:", error));
+            }
+        </script>
+    </head>
+    <body>
+        <h1>Door Control</h1>
+        <button onclick="sendCommand('open')">Open</button>
+        <button onclick="sendCommand('close')">Close</button>
+    </body>
+</html>
