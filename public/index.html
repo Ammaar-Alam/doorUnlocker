@@ -17,7 +17,7 @@
                         headers: {
                             "Content-Type": "application/x-www-form-urlencoded",
                         },
-                        body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`,
+                        body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}&audience=https://api2.arduino.cc/iot`,
                     },
                 );
                 const tokenData = await tokenResponse.json();
