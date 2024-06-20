@@ -24,6 +24,9 @@ const int ENA = 9;
 #define RED_LED LEDR
 #define GREEN_LED LEDG
 
+// Motor run duration in milliseconds
+const unsigned long motorRunTime = 2500;
+
 // Callback function to handle changes in doorCommand
 void onDoorCommandChange() {
     Serial.print("Door command changed to: ");
@@ -35,12 +38,20 @@ void onDoorCommandChange() {
         analogWrite(ENA, 255); // Full speed
         digitalWrite(RED_LED, HIGH); // Turn on red LED
         digitalWrite(GREEN_LED, LOW);  // Turn off green LED
+        delay(motorRunTime); // Run motor for specified duration
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, LOW);
+        analogWrite(ENA, 0); // Stop the motor
     } else if (doorCommand == "close") {
         digitalWrite(IN1, LOW);
         digitalWrite(IN2, HIGH);
         analogWrite(ENA, 255); // Full speed
         digitalWrite(RED_LED, LOW);  // Turn off red LED
         digitalWrite(GREEN_LED, HIGH); // Turn on green LED
+        delay(motorRunTime); // Run motor for specified duration
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, LOW);
+        analogWrite(ENA, 0); // Stop the motor
     } else {
         digitalWrite(IN1, LOW);
         digitalWrite(IN2, LOW);
@@ -63,7 +74,7 @@ void setup() {
     pinMode(RED_LED, OUTPUT);
     pinMode(GREEN_LED, OUTPUT);
     digitalWrite(RED_LED, LOW);
-    digitalWrite(GREEN_LED, LOW);
+    digitalWrite(GREEN_LED, HIGH); // Default to door closed
 
     // Attempt to start Serial communication
     unsigned long startMillis = millis();
