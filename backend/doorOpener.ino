@@ -6,8 +6,6 @@
 const char SSID[] = "puvisitor";
 const char PASS[] = ""; // No password for the network
 
-// Replace with the authenticated device's MAC address (from your iPhone's WiFi details for puvisitor)
-
 // Arduino IoT Cloud credentials
 const char THING_ID[] = "3420f1e7-f743-4d7d-91df-ea746d4f01e0"; // Replace with your Thing ID
 const char DEVICE_ID[] = "0f91b9e4-a0db-48b7-8bfd-83ebc031e134"; // Replace with your Device ID
@@ -17,23 +15,63 @@ String doorCommand;
 
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 
+// Motor control pins
+const int IN1 = 2;
+const int IN2 = 3;
+const int ENA = 9;
+
+// LED pins
+#define RED_LED LEDR
+#define GREEN_LED LEDG
+
 // Callback function to handle changes in doorCommand
 void onDoorCommandChange() {
     Serial.print("Door command changed to: ");
     Serial.println(doorCommand);
 
     if (doorCommand == "open") {
-        digitalWrite(LEDR, HIGH); // Turn on red LED
-        digitalWrite(LEDG, LOW);  // Turn off green LED
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        analogWrite(ENA, 255); // Full speed
+        digitalWrite(RED_LED, HIGH); // Turn on red LED
+        digitalWrite(GREEN_LED, LOW);  // Turn off green LED
     } else if (doorCommand == "close") {
-        digitalWrite(LEDR, LOW);  // Turn off red LED
-        digitalWrite(LEDG, HIGH); // Turn on green LED
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        analogWrite(ENA, 255); // Full speed
+        digitalWrite(RED_LED, LOW);  // Turn off red LED
+        digitalWrite(GREEN_LED, HIGH); // Turn on green LED
+    } else {
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, LOW);
+        analogWrite(ENA, 0); // Stop the motor
+        digitalWrite(RED_LED, LOW);
+        digitalWrite(GREEN_LED, LOW);
     }
 }
 
 void setup() {
+    // Initialize motor control pins
+    pinMode(IN1, OUTPUT);
+    pinMode(IN2, OUTPUT);
+    pinMode(ENA, OUTPUT);
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    analogWrite(ENA, 0);
+
+    // Initialize LED pins
+    pinMode(RED_LED, OUTPUT);
+    pinMode(GREEN_LED, OUTPUT);
+    digitalWrite(RED_LED, LOW);
+    digitalWrite(GREEN_LED, LOW);
+
+    // Attempt to start Serial communication
+    unsigned long startMillis = millis();
+    while (!Serial && (millis() - startMillis) < 3000) {
+        // Wait for Serial to connect or timeout after 3 seconds
+    }
+
     Serial.begin(9600);
-    while (!Serial) { }
 
     // Connect to WiFi
     Serial.print("Attempting to connect to Network named: ");
@@ -62,12 +100,6 @@ void setup() {
 
     // Define Thing properties
     ArduinoCloud.addProperty(doorCommand, READWRITE, ON_CHANGE, onDoorCommandChange);
-
-    // Initialize pins
-    pinMode(LEDR, OUTPUT);
-    pinMode(LEDG, OUTPUT);
-    digitalWrite(LEDR, LOW); // Ensure LEDs are off initially
-    digitalWrite(LEDG, LOW);
 }
 
 void loop() {
