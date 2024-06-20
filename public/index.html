@@ -2,6 +2,34 @@
 <html>
     <head>
         <title>Door Control</title>
+        <style>
+            .container {
+                margin: 0 auto;
+                text-align: center;
+                margin-top: 100px;
+            }
+            button {
+                color: white;
+                width: 100px;
+                height: 100px;
+                border-radius: 50%;
+                margin: 20px;
+                border: none;
+                font-size: 20px;
+                outline: none;
+                transition: all 0.2s;
+            }
+            .red {
+                background-color: rgb(196, 39, 39);
+            }
+            .green {
+                background-color: rgb(39, 121, 39);
+            }
+            button:hover {
+                cursor: pointer;
+                opacity: 0.7;
+            }
+        </style>
         <script>
             const thingId = "3420f1e7-f743-4d7d-91df-ea746d4f01e0";
             const propertyId = "05522adb-784b-4edf-8855-2baf1e132187";
@@ -55,7 +83,7 @@
     </head>
     <body>
         <h1>Door Control</h1>
-        <button onclick="sendCommand('open')">Open</button>
-        <button onclick="sendCommand('close')">Close</button>
+        <button class="red" onclick="sendCommand('open')">Open</button>
+        <button class="green" onclick="sendCommand('close')">Close</button>
     </body>
 </html>
