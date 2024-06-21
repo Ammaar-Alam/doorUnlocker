@@ -25,7 +25,7 @@ const int ENA = 9;
 #define GREEN_LED LEDG
 
 // Motor run duration in milliseconds
-const unsigned long motorRunTime = 2500;
+const unsigned long motorRunTime = 1500;
 
 // Callback function to handle changes in doorCommand
 void onDoorCommandChange() {
