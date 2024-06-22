@@ -3,11 +3,17 @@
     <head>
         <title>Ammaar's Dorm Controls</title>
         <link rel="stylesheet" type="text/css" href="styles.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+            integrity="sha512-dTdT9N1KltcLp6d0h2z1y/fFMSHFSzZiLl5Dlfy4xjW2mlSyO0p8poSKhZTI7WGPszmFkh5Rhx/ZX4pzjKXn0w=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+        />
         <script>
             const thingId = "3420f1e7-f743-4d7d-91df-ea746d4f01e0";
             const propertyId = "05522adb-784b-4edf-8855-2baf1e132187";
-            const proxyServerUrl =
-                "https://proxy-server-alam-ec4f553c366a.herokuapp.com";
+            const proxyServerUrl = "https://proxy-server-alam-ec4f553c366a.herokuapp.com";
 
             async function sendCommand(command) {
                 try {
@@ -56,9 +62,7 @@
             function toggleSwitch(element) {
                 const isChecked = element.checked;
                 sendCommand(isChecked ? "true" : "false");
-                document.querySelector(".status-open").style.color = isChecked
-                    ? "#FF4B4B"
-                    : "#888";
+                document.querySelector(".status-open").style.color = isChecked ? "#FF4B4B" : "#888";
                 document.querySelector(".status-closed").style.color = isChecked
                     ? "#888"
                     : "#4CAF50";
@@ -84,25 +88,23 @@
             <section class="info">
                 <h2>About This Project</h2>
                 <p>
-                    This is a personal project I worked on over the summer. The switch
-                    at the top really does over or close my door hehe; it sends a
-                    command to my proxy server which routes that command to the Arduino
-                    IoT cloud server, relaying that command to the arduino. That
-                    arduino is connected to a motor driver which then spins a DC motor,
-                    reeling a fishing line knotted around my door handle, pulling it
-                    down.
+                    This is a personal project I worked on over the summer. The switch at the top
+                    really does over or close my door hehe; it sends a command to my proxy server
+                    which routes that command to the Arduino IoT cloud server, relaying that command
+                    to the arduino. That arduino is connected to a motor driver which then spins a
+                    DC motor, reeling a fishing line knotted around my door handle, pulling it down.
                     <br /><br />
-                    For now, I don't really plan to add any more automation, this
-                    project was mainly inspired by my very real problem of locking
-                    myself out somewhat frequently; although it was really fun to learn
-                    how to work with arduinos and circuitry,,, so maybe idk
+                    For now, I don't really plan to add any more automation, this project was mainly
+                    inspired by my very real problem of locking myself out somewhat frequently;
+                    although it was really fun to learn how to work with arduinos and circuitry,,,
+                    so maybe idk
                 </p>
                 <p style="color: gray; text-align: center; font-size: 12px">
-                    <i
-                        >All the parts I used, including those bought and printed, are
-                        all open source on the Github Repo, including the code, so feel
-                        free to make one yourself :)</i
-                    >
+                    <i>
+                        All the parts I used, including those bought and printed, are all open
+                        source on the Github Repo, including the code, so feel free to make one
+                        yourself :)
+                    </i>
                 </p>
                 <br />
                 <hr />
@@ -110,19 +112,17 @@
                 <ul class="social-links">
                     <li>
                         <a href="https://github.com/Ammaar-Alam" target="_blank"
-                            >GitHub</a
+                            ><i class="fab fa-github"></i> GitHub</a
                         >
                     </li>
                     <li>
-                        <a
-                            href="https://www.linkedin.com/in/Ammaar-Alam"
-                            target="_blank"
-                            >LinkedIn</a
+                        <a href="https://www.linkedin.com/in/Ammaar-Alam" target="_blank"
+                            ><i class="fab fa-linkedin"></i> LinkedIn</a
                         >
                     </li>
                     <li>
                         <a href="https://ammaar.xyz" target="_blank"
-                            >Photography Portfolio</a
+                            ><i class="fas fa-camera-retro"></i> Photography Portfolio</a
                         >
                     </li>
                 </ul>

@@ -13,7 +13,7 @@ body {
 }
 
 header {
-    background-color: #00796b;
+    background-color: #0b5563;
     width: 100%;
     padding: 20px 0;
     text-align: center;
@@ -52,7 +52,7 @@ main {
 .info h2 {
     font-size: 28px;
     margin-bottom: 30px;
-    color: #00796b;
+    color: #0b5563;
 }
 
 .switch-container {
@@ -100,7 +100,7 @@ main {
 }
 
 input:checked + .slider {
-    background-color: #ff4b4b;
+    background-color: #fe5f55;
 }
 
 input:checked + .slider:before {
@@ -137,9 +137,14 @@ input:checked + .slider:before {
 
 .social-links a {
     text-decoration: none;
-    color: #00796b;
+    color: #0b5563;
     font-size: 20px;
     transition: color 0.2s;
+}
+
+.social-links a img {
+    width: 24px;
+    height: 24px;
 }
 
 .social-links a:hover {
@@ -147,7 +152,7 @@ input:checked + .slider:before {
 }
 
 footer {
-    background-color: #00796b;
+    background-color: #0b5563;
     width: 100%;
     padding: 10px 0;
     text-align: center;
@@ -175,25 +180,15 @@ footer p {
     }
 
     .slider:before {
-        height: 26px;
         width: 26px;
-        transform: translateX(26px);
-    }
-
-    .container h2,
-    .info h2 {
-        font-size: 24px;
+        height: 26px;
     }
 
     .status {
-        font-size: 16px;
+        font-size: 14px;
     }
 
-    .info p {
-        font-size: 16px;
-    }
-
-    .social-links a {
-        font-size: 18px;
+    header h1 {
+        font-size: 28px;
     }
 }
