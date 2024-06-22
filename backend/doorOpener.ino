@@ -11,64 +11,58 @@ const char THING_ID[] = "3420f1e7-f743-4d7d-91df-ea746d4f01e0"; // Replace with 
 const char DEVICE_ID[] = "0f91b9e4-a0db-48b7-8bfd-83ebc031e134"; // Replace with your Device ID
 
 // Declare a property to sync with Arduino Cloud
-String doorCommand;
+bool doorOpen;
 
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 
 // Motor control pins
-const int IN1 = 2;
-const int IN2 = 3;
-const int ENA = 9;
+const int IN3 = 2;
+const int IN4 = 3;
+const int ENB = 9;
 
 // LED pins
 #define RED_LED LEDR
 #define GREEN_LED LEDG
 
 // Motor run duration in milliseconds
-const unsigned long motorRunTime = 1500;
+const unsigned long motorRunTime = 1000;
 
-// Callback function to handle changes in doorCommand
-void onDoorCommandChange() {
-    Serial.print("Door command changed to: ");
-    Serial.println(doorCommand);
+// Callback function to handle changes in doorOpen
+void onDoorOpenChange() {
+    Serial.print("Door state changed to: ");
+    Serial.println(doorOpen ? "Open" : "Closed");
 
-    if (doorCommand == "open") {
-        digitalWrite(IN1, HIGH);
-        digitalWrite(IN2, LOW);
-        analogWrite(ENA, 255); // Full speed
+    if (doorOpen) {
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+        analogWrite(ENB, 255); // Full speed
         digitalWrite(RED_LED, HIGH); // Turn on red LED
         digitalWrite(GREEN_LED, LOW);  // Turn off green LED
         delay(motorRunTime); // Run motor for specified duration
-        digitalWrite(IN1, LOW);
-        digitalWrite(IN2, LOW);
-        analogWrite(ENA, 0); // Stop the motor
-    } else if (doorCommand == "close") {
-        digitalWrite(IN1, LOW);
-        digitalWrite(IN2, HIGH);
-        analogWrite(ENA, 255); // Full speed
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, LOW);
+        analogWrite(ENB, 0); // Stop the motor
+    } else {
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+        analogWrite(ENB, 255); // Full speed
         digitalWrite(RED_LED, LOW);  // Turn off red LED
         digitalWrite(GREEN_LED, HIGH); // Turn on green LED
         delay(motorRunTime); // Run motor for specified duration
-        digitalWrite(IN1, LOW);
-        digitalWrite(IN2, LOW);
-        analogWrite(ENA, 0); // Stop the motor
-    } else {
-        digitalWrite(IN1, LOW);
-        digitalWrite(IN2, LOW);
-        analogWrite(ENA, 0); // Stop the motor
-        digitalWrite(RED_LED, LOW);
-        digitalWrite(GREEN_LED, LOW);
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, LOW);
+        analogWrite(ENB, 0); // Stop the motor
     }
 }
 
 void setup() {
     // Initialize motor control pins
-    pinMode(IN1, OUTPUT);
-    pinMode(IN2, OUTPUT);
-    pinMode(ENA, OUTPUT);
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, LOW);
-    analogWrite(ENA, 0);
+    pinMode(IN3, OUTPUT);
+    pinMode(IN4, OUTPUT);
+    pinMode(ENB, OUTPUT);
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, LOW);
+    analogWrite(ENB, 0);
 
     // Initialize LED pins
     pinMode(RED_LED, OUTPUT);
@@ -77,11 +71,6 @@ void setup() {
     digitalWrite(GREEN_LED, HIGH); // Default to door closed
 
     // Attempt to start Serial communication
-    unsigned long startMillis = millis();
-    while (!Serial && (millis() - startMillis) < 3000) {
-        // Wait for Serial to connect or timeout after 3 seconds
-    }
-
     Serial.begin(9600);
 
     // Connect to WiFi
@@ -110,7 +99,7 @@ void setup() {
     ArduinoCloud.printDebugInfo();
 
     // Define Thing properties
-    ArduinoCloud.addProperty(doorCommand, READWRITE, ON_CHANGE, onDoorCommandChange);
+    ArduinoCloud.addProperty(doorOpen, READWRITE, ON_CHANGE, onDoorOpenChange);
 }
 
 void loop() {

@@ -137,11 +137,11 @@ input:checked + .slider:before {
 }
 
 input:checked ~ #closed {
-    color: rgba(255, 94, 85, 1); /* Solid Red */
+    color: rgba(76, 175, 80, 1); /* Solid Green */
 }
 
 input:not(:checked) ~ #open {
-    color: rgba(76, 175, 80, 1); /* Solid Green */
+    color: rgba(255, 94, 85, 1); /* Solid Red */
 }
 
 .info p {

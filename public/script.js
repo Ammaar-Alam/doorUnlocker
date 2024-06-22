@@ -46,11 +46,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const openStatus = document.getElementById("open");
     const closedStatus = document.getElementById("closed");
 
-    if (doorSwitch.checked) {
-      closedStatus.style.color = "rgba(255, 94, 85, 1)"; // Solid Red
+    if (!doorSwitch.checked) {
+      closedStatus.style.color = "rgba(76, 175, 80, 1)"; // Solid Green
       openStatus.style.color = "#888"; // Default gray
     } else {
-      openStatus.style.color = "rgba(76, 175, 80, 1)"; // Solid Green
+      openStatus.style.color = "rgba(255, 94, 85, 1)"; // Solid Red
       closedStatus.style.color = "#888"; // Default gray
     }
   }
