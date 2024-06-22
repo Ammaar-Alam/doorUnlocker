@@ -9,7 +9,7 @@ body {
     flex-direction: column;
     align-items: center;
     color: #333;
-    height: 100vh;
+    min-height: 100vh;
 }
 
 header {
@@ -36,7 +36,7 @@ main {
     align-items: center;
 }
 
-.container,
+.control-panel,
 .info {
     background: #ffffff;
     width: 100%;
@@ -48,17 +48,18 @@ main {
     text-align: center;
 }
 
-.container h2,
+.control-panel h2,
 .info h2 {
     font-size: 28px;
     margin-bottom: 30px;
     color: #13262f;
 }
 
-.switch-container {
+.toggle-container {
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-top: 20px;
 }
 
 .switch {
@@ -82,7 +83,7 @@ main {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #748386;
+    background-color: rgba(76, 175, 80, 0.8); /* Green with transparency */
     transition: 0.4s;
     border-radius: 44px;
 }
@@ -100,33 +101,47 @@ main {
 }
 
 input:checked + .slider {
-    background-color: #4f000b;
+    background-color: rgba(255, 94, 85, 0.8); /* Red with transparency */
 }
 
 input:checked + .slider:before {
     transform: translateX(36px);
 }
 
-.status {
+.status-text {
     font-size: 18px;
     color: #888;
     margin: 0 10px;
 }
 
-.status-closed {
-    color: #4f000b;
+#closed {
+    color: #888; /* Default gray */
 }
 
-.status-open {
-    color: #003049;
+#open {
+    color: #888; /* Default gray */
+}
+
+input:checked ~ #closed {
+    color: rgba(255, 94, 85, 1); /* Solid Red */
+}
+
+input:not(:checked) ~ #open {
+    color: rgba(76, 175, 80, 1); /* Solid Green */
 }
 
 .info p {
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.6;
     margin-bottom: 20px;
     text-align: justify;
     color: #13262f;
+}
+
+.disclaimer {
+    color: #748386;
+    text-align: center;
+    font-size: 12px;
 }
 
 .social-links {
@@ -173,7 +188,7 @@ footer p {
 }
 
 @media (max-width: 600px) {
-    .container,
+    .control-panel,
     .info {
         width: 90%;
         padding: 20px;
@@ -189,7 +204,7 @@ footer p {
         height: 26px;
     }
 
-    .status {
+    .status-text {
         font-size: 14px;
     }
 
