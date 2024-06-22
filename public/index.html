@@ -1,78 +1,43 @@
 <!doctype html>
-<html>
+<html lang="en">
     <head>
-        <title>Ammaar's Dorm Controls</title>
-        <link rel="stylesheet" type="text/css" href="styles.css" />
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-            integrity="sha512-dTdT9N1KltcLp6d0h2z1y/fFMSHFSzZiLl5Dlfy4xjW2mlSyO0p8poSKhZTI7WGPszmFkh5Rhx/ZX4pzjKXn0w=="
-            crossorigin="anonymous"
-            referrerpolicy="no-referrer"
-        />
-        <script src="script.js" defer></script>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Smart Dorm Control</title>
+        <link rel="stylesheet" href="styles.css" />
     </head>
     <body>
         <header>
             <h1>Ammaar's Dorm Room Controls</h1>
         </header>
         <main>
-            <div class="container">
+            <section class="control-panel">
                 <h2>Door Status</h2>
-                <div class="switch-container">
-                    <span class="status status-closed">CLOSED</span>
+                <div class="toggle-container">
                     <label class="switch">
-                        <input type="checkbox" onclick="toggleSwitch(this)" />
-                        <span class="slider"></span>
+                        <input type="checkbox" id="doorSwitch" />
+                        <span class="slider round"></span>
                     </label>
-                    <span class="status status-open">OPEN</span>
+                    <span class="status-text" id="closed">CLOSED</span>
+                    <span class="status-text" id="open">OPEN</span>
                 </div>
-            </div>
-            <section class="info">
+            </section>
+            <section class="about">
                 <h2>About This Project</h2>
+                <p>This is a personal project I worked on over the summer...</p>
+                <p>For now, I don't really plan to add any more automation...</p>
+                <p>All the parts I used, including those bought and printed...</p>
+                <h3>Connect with Me</h3>
                 <p>
-                    This is a personal project I worked on over the summer. The switch at the top
-                    really does over or close my door hehe; it sends a command to my proxy server
-                    which routes that command to the Arduino IoT cloud server, relaying that command
-                    to the arduino. That arduino is connected to a motor driver which then spins a
-                    DC motor, reeling a fishing line knotted around my door handle, pulling it down.
-                    <br /><br />
-                    For now, I don't really plan to add any more automation, this project was mainly
-                    inspired by my very real problem of locking myself out somewhat frequently;
-                    although it was really fun to learn how to work with arduinos and circuitry,,,
-                    so maybe idk
+                    <a href="https://github.com/your-github" target="_blank">GitHub</a>
+                    <a href="https://linkedin.com/in/your-linkedin" target="_blank">LinkedIn</a>
+                    <a href="https://your-photography-portfolio.com" target="_blank"
+                        >Photography Portfolio</a
+                    >
                 </p>
-                <p style="color: gray; text-align: center; font-size: 12px">
-                    <i>
-                        All the parts I used, including those bought and printed, are all open
-                        source on the Github Repo, including the code, so feel free to make one
-                        yourself :)
-                    </i>
-                </p>
-                <br />
-                <hr />
-                <h2>Connect with Me</h2>
-                <ul class="social-links">
-                    <li>
-                        <a href="https://github.com/Ammaar-Alam" target="_blank"
-                            ><i class="fab fa-github"></i> GitHub</a
-                        >
-                    </li>
-                    <li>
-                        <a href="https://www.linkedin.com/in/Ammaar-Alam" target="_blank"
-                            ><i class="fab fa-linkedin"></i> LinkedIn</a
-                        >
-                    </li>
-                    <li>
-                        <a href="https://ammaar.xyz" target="_blank"
-                            ><i class="fas fa-camera-retro"></i> Photography Portfolio</a
-                        >
-                    </li>
-                </ul>
             </section>
         </main>
-        <footer>
-            <p>© 2024–25 Ammaar Alam. All rights reserved.</p>
-        </footer>
+        <footer>&copy; 2024–25 Ammaar Alam. All rights reserved.</footer>
+        <script src="script.js"></script>
     </body>
 </html>
