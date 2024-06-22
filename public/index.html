@@ -10,64 +10,7 @@
             crossorigin="anonymous"
             referrerpolicy="no-referrer"
         />
-        <script>
-            const thingId = "3420f1e7-f743-4d7d-91df-ea746d4f01e0";
-            const propertyId = "05522adb-784b-4edf-8855-2baf1e132187";
-            const proxyServerUrl = "https://proxy-server-alam-ec4f553c366a.herokuapp.com";
-
-            async function sendCommand(command) {
-                try {
-                    const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({}),
-                    });
-
-                    if (!tokenResponse.ok) {
-                        const errorDetail = await tokenResponse.text();
-                        console.error("Failed to get access token:", errorDetail);
-                        return;
-                    }
-
-                    const tokenData = await tokenResponse.json();
-                    const accessToken = tokenData.access_token;
-
-                    const response = await fetch(`${proxyServerUrl}/command`, {
-                        method: "PUT",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            accessToken,
-                            thingId,
-                            propertyId,
-                            command,
-                        }),
-                    });
-
-                    if (!response.ok) {
-                        const errorDetail = await response.text();
-                        console.error("Failed to update property:", errorDetail);
-                        return;
-                    }
-
-                    console.log(await response.text());
-                } catch (error) {
-                    console.error("Error during the request:", error);
-                }
-            }
-
-            function toggleSwitch(element) {
-                const isChecked = element.checked;
-                sendCommand(isChecked ? "true" : "false");
-                document.querySelector(".status-open").style.color = isChecked ? "#FF4B4B" : "#888";
-                document.querySelector(".status-closed").style.color = isChecked
-                    ? "#888"
-                    : "#4CAF50";
-            }
-        </script>
+        <script src="script.js" defer></script>
     </head>
     <body>
         <header>

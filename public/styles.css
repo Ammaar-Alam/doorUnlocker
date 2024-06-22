@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap");
 
 body {
-    background-color: #f3f4f6;
+    background-color: #edf5fc;
     font-family: "Roboto", sans-serif;
     margin: 0;
     padding: 0;
@@ -13,7 +13,7 @@ body {
 }
 
 header {
-    background-color: #0b5563;
+    background-color: #003049;
     width: 100%;
     padding: 20px 0;
     text-align: center;
@@ -38,7 +38,7 @@ main {
 
 .container,
 .info {
-    background: white;
+    background: #ffffff;
     width: 100%;
     max-width: 600px;
     padding: 40px;
@@ -52,7 +52,7 @@ main {
 .info h2 {
     font-size: 28px;
     margin-bottom: 30px;
-    color: #0b5563;
+    color: #13262f;
 }
 
 .switch-container {
@@ -82,7 +82,7 @@ main {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #4caf50;
+    background-color: #748386;
     transition: 0.4s;
     border-radius: 44px;
 }
@@ -100,7 +100,7 @@ main {
 }
 
 input:checked + .slider {
-    background-color: #fe5f55;
+    background-color: #4f000b;
 }
 
 input:checked + .slider:before {
@@ -114,7 +114,11 @@ input:checked + .slider:before {
 }
 
 .status-closed {
-    color: #4caf50;
+    color: #4f000b;
+}
+
+.status-open {
+    color: #003049;
 }
 
 .info p {
@@ -122,6 +126,7 @@ input:checked + .slider:before {
     line-height: 1.6;
     margin-bottom: 20px;
     text-align: justify;
+    color: #13262f;
 }
 
 .social-links {
@@ -137,7 +142,7 @@ input:checked + .slider:before {
 
 .social-links a {
     text-decoration: none;
-    color: #0b5563;
+    color: #003049;
     font-size: 20px;
     transition: color 0.2s;
 }
@@ -148,11 +153,11 @@ input:checked + .slider:before {
 }
 
 .social-links a:hover {
-    color: #004d40;
+    color: #13262f;
 }
 
 footer {
-    background-color: #0b5563;
+    background-color: #003049;
     width: 100%;
     padding: 10px 0;
     text-align: center;
