@@ -52,13 +52,25 @@
                     console.error("Error during the request:", error);
                 }
             }
+
+            function toggleSwitch(element) {
+                const isChecked = element.checked;
+                sendCommand(isChecked ? "true" : "false");
+                element.nextElementSibling.textContent = isChecked ? "Open" : "Closed";
+                element.nextElementSibling.style.color = isChecked
+                    ? "#FF4B4B"
+                    : "#4CAF50";
+            }
         </script>
     </head>
     <body>
         <div class="container">
             <h1>Door Control</h1>
-            <button class="red" onclick="sendCommand('open')">Open</button>
-            <button class="green" onclick="sendCommand('close')">Close</button>
+            <label class="switch">
+                <input type="checkbox" onclick="toggleSwitch(this)" />
+                <span class="slider"></span>
+            </label>
+            <span class="status">Closed</span>
         </div>
     </body>
 </html>
