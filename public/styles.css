@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap");
 
 body {
-    background-color: #e0f7fa;
+    background-color: #f3f4f6;
     font-family: "Roboto", sans-serif;
     margin: 0;
     padding: 0;
@@ -9,6 +9,7 @@ body {
     flex-direction: column;
     align-items: center;
     color: #333;
+    height: 100vh;
 }
 
 header {
@@ -30,19 +31,25 @@ main {
     width: 100%;
     max-width: 800px;
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.container {
-    text-align: center;
-    width: 100%;
-    padding: 40px;
+.container,
+.info {
     background: white;
+    width: 100%;
+    max-width: 600px;
+    padding: 40px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    margin-bottom: 40px;
+    margin-bottom: 20px;
+    text-align: center;
 }
 
-.container h2 {
+.container h2,
+.info h2 {
     font-size: 28px;
     margin-bottom: 30px;
     color: #00796b;
@@ -110,24 +117,11 @@ input:checked + .slider:before {
     color: #4caf50;
 }
 
-.info {
-    background: white;
-    padding: 40px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    margin-bottom: 40px;
-}
-
-.info h2 {
-    font-size: 28px;
-    margin-bottom: 20px;
-    color: #00796b;
-}
-
 .info p {
     font-size: 18px;
     line-height: 1.6;
     margin-bottom: 20px;
+    text-align: justify;
 }
 
 .social-links {
@@ -158,6 +152,8 @@ footer {
     padding: 10px 0;
     text-align: center;
     box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    bottom: 0;
 }
 
 footer p {
@@ -167,7 +163,8 @@ footer p {
 }
 
 @media (max-width: 600px) {
-    .container {
+    .container,
+    .info {
         width: 90%;
         padding: 20px;
     }
