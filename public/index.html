@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
     <head>
-        <title>Door Control</title>
+        <title>Ammaar's Dorm Controls</title>
         <link rel="stylesheet" type="text/css" href="styles.css" />
         <script>
             const thingId = "3420f1e7-f743-4d7d-91df-ea746d4f01e0";
@@ -56,21 +56,63 @@
             function toggleSwitch(element) {
                 const isChecked = element.checked;
                 sendCommand(isChecked ? "true" : "false");
-                element.nextElementSibling.textContent = isChecked ? "Open" : "Closed";
-                element.nextElementSibling.style.color = isChecked
+                document.querySelector(".status-open").style.color = isChecked
                     ? "#FF4B4B"
+                    : "#888";
+                document.querySelector(".status-closed").style.color = isChecked
+                    ? "#888"
                     : "#4CAF50";
             }
         </script>
     </head>
     <body>
-        <div class="container">
-            <h1>Door Control</h1>
-            <label class="switch">
-                <input type="checkbox" onclick="toggleSwitch(this)" />
-                <span class="slider"></span>
-            </label>
-            <span class="status">Closed</span>
-        </div>
+        <header>
+            <h1>Smart Dorm Control</h1>
+        </header>
+        <main>
+            <div class="container">
+                <h2>Door Control</h2>
+                <div class="switch-container">
+                    <span class="status status-closed">Closed</span>
+                    <label class="switch">
+                        <input type="checkbox" onclick="toggleSwitch(this)" />
+                        <span class="slider"></span>
+                    </label>
+                    <span class="status status-open">Open</span>
+                </div>
+            </div>
+            <section class="info">
+                <h2>About This Project</h2>
+                <p>
+                    Yes! Anyone can control my dorm using these buttons which send live
+                    Arduino outputs. This project showcases how IoT can be used for
+                    smart home automation, specifically for controlling door locks.
+                    Stay tuned as I add more automation features to my dorm!
+                </p>
+                <h2>Connect with Me</h2>
+                <ul class="social-links">
+                    <li>
+                        <a href="https://github.com/yourusername" target="_blank"
+                            >GitHub</a
+                        >
+                    </li>
+                    <li>
+                        <a href="https://twitter.com/yourusername" target="_blank"
+                            >Twitter</a
+                        >
+                    </li>
+                    <li>
+                        <a
+                            href="https://www.linkedin.com/in/yourusername"
+                            target="_blank"
+                            >LinkedIn</a
+                        >
+                    </li>
+                </ul>
+            </section>
+        </main>
+        <footer>
+            <p>© 2024 Your Name. All rights reserved.</p>
+        </footer>
     </body>
 </html>
