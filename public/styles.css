@@ -1,18 +1,22 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap");
+
 body {
-    background-color: #f5f5f5;
-    font-family: Arial, sans-serif;
+    background-color: #e0f7fa;
+    font-family: "Roboto", sans-serif;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    color: #333;
 }
 
 header {
-    background-color: #333;
+    background-color: #00796b;
     width: 100%;
     padding: 20px 0;
     text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 header h1 {
@@ -34,13 +38,14 @@ main {
     padding: 40px;
     background: white;
     border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin-bottom: 40px;
 }
 
 .container h2 {
     font-size: 28px;
     margin-bottom: 30px;
+    color: #00796b;
 }
 
 .switch-container {
@@ -109,13 +114,14 @@ input:checked + .slider:before {
     background: white;
     padding: 40px;
     border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin-bottom: 40px;
 }
 
 .info h2 {
     font-size: 28px;
     margin-bottom: 20px;
+    color: #00796b;
 }
 
 .info p {
@@ -137,20 +143,21 @@ input:checked + .slider:before {
 
 .social-links a {
     text-decoration: none;
-    color: #4caf50;
+    color: #00796b;
     font-size: 20px;
     transition: color 0.2s;
 }
 
 .social-links a:hover {
-    color: #ff4b4b;
+    color: #004d40;
 }
 
 footer {
-    background-color: #333;
+    background-color: #00796b;
     width: 100%;
     padding: 10px 0;
     text-align: center;
+    box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
 }
 
 footer p {
