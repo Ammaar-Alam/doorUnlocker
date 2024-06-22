@@ -108,7 +108,7 @@ input:checked + .slider:before {
 }
 
 .status {
-    font-size: 20px;
+    font-size: 18px;
     color: #888;
     margin: 0 10px;
 }
@@ -118,7 +118,7 @@ input:checked + .slider:before {
 }
 
 .info p {
-    font-size: 18px;
+    font-size: 14px;
     line-height: 1.6;
     margin-bottom: 20px;
     text-align: justify;

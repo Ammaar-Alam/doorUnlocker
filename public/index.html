@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
     <head>
-        <title>Smart Dorm Control</title>
+        <title>Ammaar's Dorm Controls</title>
         <link rel="stylesheet" type="text/css" href="styles.css" />
         <script>
             const thingId = "3420f1e7-f743-4d7d-91df-ea746d4f01e0";
@@ -67,52 +67,69 @@
     </head>
     <body>
         <header>
-            <h1>Smart Dorm Control</h1>
+            <h1>Ammaar's Dorm Room Controls</h1>
         </header>
         <main>
             <div class="container">
-                <h2>Door Control</h2>
+                <h2>Door Status</h2>
                 <div class="switch-container">
-                    <span class="status status-closed">Closed</span>
+                    <span class="status status-closed">CLOSED</span>
                     <label class="switch">
                         <input type="checkbox" onclick="toggleSwitch(this)" />
                         <span class="slider"></span>
                     </label>
-                    <span class="status status-open">Open</span>
+                    <span class="status status-open">OPEN</span>
                 </div>
             </div>
             <section class="info">
                 <h2>About This Project</h2>
                 <p>
-                    Yes! Anyone can control my dorm using these buttons which send live
-                    Arduino outputs. This project showcases how IoT can be used for
-                    smart home automation, specifically for controlling door locks.
-                    Stay tuned as I add more automation features to my dorm!
+                    This is a personal project I worked on over the summer. The switch
+                    at the top really does over or close my door hehe; it sends a
+                    command to my proxy server which routes that command to the Arduino
+                    IoT cloud server, relaying that command to the arduino. That
+                    arduino is connected to a motor driver which then spins a DC motor,
+                    reeling a fishing line knotted around my door handle, pulling it
+                    down.
+                    <br /><br />
+                    For now, I don't really plan to add any more automation, this
+                    project was mainly inspired by my very real problem of locking
+                    myself out somewhat frequently; although it was really fun to learn
+                    how to work with arduinos and circuitry,,, so maybe idk
                 </p>
+                <p style="color: gray; text-align: center; font-size: 12px">
+                    <i
+                        >All the parts I used, including those bought and printed, are
+                        all open source on the Github Repo, including the code, so feel
+                        free to make one yourself :)</i
+                    >
+                </p>
+                <br />
+                <hr />
                 <h2>Connect with Me</h2>
                 <ul class="social-links">
                     <li>
-                        <a href="https://github.com/yourusername" target="_blank"
+                        <a href="https://github.com/Ammaar-Alam" target="_blank"
                             >GitHub</a
                         >
                     </li>
                     <li>
-                        <a href="https://twitter.com/yourusername" target="_blank"
-                            >Twitter</a
+                        <a
+                            href="https://www.linkedin.com/in/Ammaar-Alam"
+                            target="_blank"
+                            >LinkedIn</a
                         >
                     </li>
                     <li>
-                        <a
-                            href="https://www.linkedin.com/in/yourusername"
-                            target="_blank"
-                            >LinkedIn</a
+                        <a href="https://ammaar.xyz" target="_blank"
+                            >Photography Portfolio</a
                         >
                     </li>
                 </ul>
             </section>
         </main>
         <footer>
-            <p>© 2024 Your Name. All rights reserved.</p>
+            <p>© 2024–25 Ammaar Alam. All rights reserved.</p>
         </footer>
     </body>
 </html>
