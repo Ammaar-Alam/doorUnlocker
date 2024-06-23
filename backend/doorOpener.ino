@@ -70,8 +70,13 @@ void setup() {
     digitalWrite(RED_LED, LOW);
     digitalWrite(GREEN_LED, HIGH); // Default to door closed
 
-    // Attempt to start Serial communication
+    unsigned long startMillis = millis();
+    while (!Serial && (millis() - startMillis) < 3000) {
+        // Wait for Serial to connect or timeout after 3 seconds
+    }
+
     Serial.begin(9600);
+
 
     // Connect to WiFi
     Serial.print("Attempting to connect to Network named: ");
