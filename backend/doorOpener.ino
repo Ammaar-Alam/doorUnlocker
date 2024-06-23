@@ -16,9 +16,9 @@ bool doorOpen;
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
 
 // Motor control pins
-const int IN3 = 2;
-const int IN4 = 3;
-const int ENB = 9;
+const int IN2 = 2;
+const int IN3 = 3;
+const int ENA = 9;
 
 // LED pins
 #define RED_LED LEDR
@@ -33,36 +33,36 @@ void onDoorOpenChange() {
     Serial.println(doorOpen ? "Open" : "Closed");
 
     if (doorOpen) {
-        digitalWrite(IN3, HIGH);
-        digitalWrite(IN4, LOW);
-        analogWrite(ENB, 255); // Full speed
+        digitalWrite(IN2, HIGH);
+        digitalWrite(IN3, LOW);
+        analogWrite(ENA, 255); // Full speed
         digitalWrite(RED_LED, HIGH); // Turn on red LED
         digitalWrite(GREEN_LED, LOW);  // Turn off green LED
         delay(motorRunTime); // Run motor for specified duration
+        digitalWrite(IN2, LOW);
         digitalWrite(IN3, LOW);
-        digitalWrite(IN4, LOW);
-        analogWrite(ENB, 0); // Stop the motor
+        analogWrite(ENA, 0); // Stop the motor
     } else {
-        digitalWrite(IN3, LOW);
-        digitalWrite(IN4, HIGH);
-        analogWrite(ENB, 255); // Full speed
+        digitalWrite(IN2, LOW);
+        digitalWrite(IN3, HIGH);
+        analogWrite(ENA, 255); // Full speed
         digitalWrite(RED_LED, LOW);  // Turn off red LED
         digitalWrite(GREEN_LED, HIGH); // Turn on green LED
         delay(motorRunTime); // Run motor for specified duration
+        digitalWrite(IN2, LOW);
         digitalWrite(IN3, LOW);
-        digitalWrite(IN4, LOW);
-        analogWrite(ENB, 0); // Stop the motor
+        analogWrite(ENA, 0); // Stop the motor
     }
 }
 
 void setup() {
     // Initialize motor control pins
+    pinMode(IN2, OUTPUT);
     pinMode(IN3, OUTPUT);
-    pinMode(IN4, OUTPUT);
-    pinMode(ENB, OUTPUT);
+    pinMode(ENA, OUTPUT);
+    digitalWrite(IN2, LOW);
     digitalWrite(IN3, LOW);
-    digitalWrite(IN4, LOW);
-    analogWrite(ENB, 0);
+    analogWrite(ENA, 0);
 
     // Initialize LED pins
     pinMode(RED_LED, OUTPUT);
