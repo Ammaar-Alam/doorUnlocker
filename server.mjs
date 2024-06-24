@@ -4,7 +4,7 @@ import fetch from "node-fetch";
 const app = express();
 const port = process.env.PORT || 3000;
 
-const thingId = "edb01536-b690-4752-b933-6375666ad0d3";
+const thingId = "3420f1e7-f743-4d7d-91df-ea746d4f01e0";
 const propertyId = "05522adb-784b-4edf-8855-2baf1e132187";
 const proxyServerUrl = "https://proxy-server-alam-ec4f553c366a.herokuapp.com";
 
