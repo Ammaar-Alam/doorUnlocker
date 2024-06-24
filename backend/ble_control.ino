@@ -1,89 +1,124 @@
-#include <ArduinoBLE.h>
-#include <WiFiNINA.h>
+#include <NimBLEDevice.h>
 
+// BLE service and characteristic UUIDs
+#define SERVICE_UUID           "0000ffe0-0000-1000-8000-00805f9b34fb"
+#define CHARACTERISTIC_UUID_TX "0000ffe1-0000-1000-8000-00805f9b34fb"  // To notify the client
+#define CHARACTERISTIC_UUID_RX "0000ffe2-0000-1000-8000-00805f9b34fb"  // To receive data from client
 
-#define IN3 2
-#define IN4 3
-#define ENB 9
+// Motor control pins
+const int IN1 = 2;
+const int IN2 = 3;
+const int ENA = 9; // Note: PWM pins on ESP32 can be different
 
-BLEService settingsService("Alam's Door Arduino");
-BLEByteCharacteristic doorCharacteristic("Open or Close Door", BLEWrite | BLERead);
+// LED pins
+#define RED_LED LED_GREEN  // Adjust to the correct pin on your ESP32
+#define GREEN_LED LED_RED // Adjust to the correct pin on your ESP32
 
+// Motor run duration in milliseconds
+const unsigned long motorRunTime = 1500;
+
+// Declare a property to sync with BLE
 bool doorOpen = false;
-bool incomingDoor;
-const unsigned long motorRunTime = 1000;
+
 
 void onDoorOpenChange() {
     Serial.print("Door state changed to: ");
     Serial.println(doorOpen ? "Open" : "Closed");
 
     if (doorOpen) {
-        digitalWrite(IN3, HIGH);
-        digitalWrite(IN4, LOW);
-        analogWrite(ENB, 255); // Full speed
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        analogWrite(ENA, 150); // Full speed
+        digitalWrite(RED_LED, HIGH); // Turn on red LED
+        digitalWrite(GREEN_LED, LOW) ;  // Turn off green LED
         delay(motorRunTime); // Run motor for specified duration
-        digitalWrite(IN3, LOW);
-        digitalWrite(IN4, LOW);
-        analogWrite(ENB, 0); // Stop the motor
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, LOW);
+        analogWrite(ENA, 0); // Stop the motor
     } else {
-        digitalWrite(IN3, LOW);
-        digitalWrite(IN4, HIGH);
-        analogWrite(ENB, 255); // Full speed
-        delay(motorRunTime); // Run motor for specified duration
-        digitalWrite(IN3, LOW);
-        digitalWrite(IN4, LOW);
-        analogWrite(ENB, 0); // Stop the motor
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        analogWrite(ENA, 115); // Full speed
+        digitalWrite(RED_LED, LOW);  // Turn off red LED
+        digitalWrite(GREEN_LED, HIGH); // Turn on green LED
+        delay(1000); // Run motor for specified duration
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, LOW);
+        analogWrite(ENA, 0); // Stop the motor
     }
+}
+
+class MyCallbacks: public NimBLECharacteristicCallbacks {
+    void onWrite(NimBLECharacteristic *pCharacteristic) {
+      std::string rxValue = pCharacteristic->getValue();
+
+      if (rxValue.length() > 0) {
+        Serial.println("*********");
+        Serial.print("Received Value: ");
+
+        for (int i = 0; i < rxValue.length(); i++)
+          Serial.print(rxValue[i]);
+        Serial.println();
+
+        // Handle received value
+        if (rxValue == "1") {
+            doorOpen = true;
+            onDoorOpenChange();
+        } else if (rxValue == "0") {
+            doorOpen = false;
+            onDoorOpenChange();
+        }
+
+        Serial.println();
+        Serial.println("*********");
+      }
+    }
+};
+
+void loop() {
+    // Nothing to do here
 }
 
 void setup() {
-    unsigned long startMillis = millis();
-    while (!Serial && (millis() - startMillis) < 3000) {
-        // Wait for Serial to connect or timeout after 3 seconds
-    }
+    // Initialize motor control pins
+    pinMode(IN1, OUTPUT);
+    pinMode(IN2, OUTPUT);
+    pinMode(ENA, OUTPUT);
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    analogWrite(ENA, 0);
 
-    Serial.begin(9600);
-    pinMode(IN3, OUTPUT);
-    pinMode(IN4, OUTPUT);
-    pinMode(ENB, OUTPUT);
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, LOW);
-    analogWrite(ENB, 0);
+    // Initialize LED pins
+    pinMode(RED_LED, OUTPUT);
+    pinMode(GREEN_LED, OUTPUT);
+    digitalWrite(RED_LED, LOW);
+    digitalWrite(GREEN_LED, HIGH); // Default to door closed
 
-    if (!BLE.begin()) {
-        Serial.println("starting Bluetooth® Low Energy module failed!");
-        while (1);
-    }
+    Serial.begin(115200);
+    NimBLEDevice::init("Ammaar's DoorBot Arduino");
 
-    BLE.setDeviceName("Smart Door");
-    BLE.setLocalName("Smart Door");
-    BLE.setAdvertisedService(settingsService);
+    // Create BLE Server
+    NimBLEServer *pServer = NimBLEDevice::createServer();
 
-    settingsService.addCharacteristic(doorCharacteristic);
-    BLE.addService(settingsService);
+    // Create BLE Service
+    NimBLEService *pService = pServer->createService(SERVICE_UUID);
 
-    doorCharacteristic.writeValue(0);
-    BLE.advertise();
+    // Create BLE Characteristic
+    NimBLECharacteristic *pTxCharacteristic = pService->createCharacteristic(
+                                            CHARACTERISTIC_UUID_TX,
+                                            NIMBLE_PROPERTY::NOTIFY
+                                          );
+    NimBLECharacteristic *pRxCharacteristic = pService->createCharacteristic(
+                                             CHARACTERISTIC_UUID_RX,
+                                             NIMBLE_PROPERTY::WRITE
+                                           );
 
-    Serial.println("Project Door Online");
-}
+    pRxCharacteristic->setCallbacks(new MyCallbacks());
 
-void loop() {
-    BLEDevice central = BLE.central();
+    // Start the service
+    pService->start();
 
-    if (central) {
-        Serial.print("Connected to central: ");
-        Serial.println(central.address());
-
-        while (central.connected()) {
-            if (doorCharacteristic.written()) {
-                doorOpen = doorCharacteristic.value();
-                onDoorOpenChange();
-            }
-            delay(1000);
-        }
-
-        Serial.print(F("Disconnected from central: "));
-        Serial.println(central.address());
-    }
+    // Start advertising
+    pServer->getAdvertising()->start();
+    Serial.println("Waiting for a client connection to notify...");
 }
