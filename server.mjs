@@ -4,8 +4,8 @@ import fetch from "node-fetch";
 const app = express();
 const port = process.env.PORT || 3000;
 
-const thingId = "3420f1e7-f743-4d7d-91df-ea746d4f01e0";
-const propertyId = "05522adb-784b-4edf-8855-2baf1e132187";
+const thingId = "3701b014-1907-43d6-b82f-c91b47d74595";
+const propertyId = "3522883b-1bb8-45dc-8a58-e7d58f46308e";
 const proxyServerUrl = "https://proxy-server-alam-ec4f553c366a.herokuapp.com";
 
 // Serve static files from the "public" directory
