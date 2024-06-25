@@ -1,122 +1,86 @@
-#include <WiFiNINA.h>
-#include <ArduinoIoTCloud.h>
-#include <Arduino_ConnectionHandler.h>
-
-// Replace with your network credentials
-const char SSID[] = "puvisitor";
-const char PASS[] = ""; // No password for the network
-
-// Arduino IoT Cloud credentials
-const char THING_ID[] = "3420f1e7-f743-4d7d-91df-ea746d4f01e0"; // Replace with your Thing ID
-const char DEVICE_ID[] = "0f91b9e4-a0db-48b7-8bfd-83ebc031e134"; // Replace with your Device ID
-
-// Declare a property to sync with Arduino Cloud
-bool doorOpen;
-
-WiFiConnectionHandler ArduinoIoTPreferredConnection(SSID, PASS);
+#include "thingProperties.h"
 
 // Motor control pins
-const int IN2 = 2;
-const int IN3 = 3;
-const int ENA = 9;
+const int IN1 = 2;
+const int IN2 = 3;
+const int ENA = 9; // Note: PWM pins on ESP32 can be different
 
 // LED pins
-#define RED_LED LEDR
-#define GREEN_LED LEDG
+#define RED_LED LED_GREEN  // Adjust to the correct pin on your ESP32
+#define GREEN_LED LED_RED  // Adjust to the correct pin on your ESP32
 
 // Motor run duration in milliseconds
-const unsigned long motorRunTime = 1000;
-
-// Callback function to handle changes in doorOpen
-void onDoorOpenChange() {
-    Serial.print("Door state changed to: ");
-    Serial.println(doorOpen ? "Open" : "Closed");
-
-    if (doorOpen) {
-        digitalWrite(IN2, HIGH);
-        digitalWrite(IN3, LOW);
-        analogWrite(ENA, 255); // Full speed
-        digitalWrite(RED_LED, HIGH); // Turn on red LED
-        digitalWrite(GREEN_LED, LOW);  // Turn off green LED
-        delay(motorRunTime); // Run motor for specified duration
-        digitalWrite(IN2, LOW);
-        digitalWrite(IN3, LOW);
-        analogWrite(ENA, 0); // Stop the motor
-    } else {
-        digitalWrite(IN2, LOW);
-        digitalWrite(IN3, HIGH);
-        analogWrite(ENA, 255); // Full speed
-        digitalWrite(RED_LED, LOW);  // Turn off red LED
-        digitalWrite(GREEN_LED, HIGH); // Turn on green LED
-        delay(motorRunTime); // Run motor for specified duration
-        digitalWrite(IN2, LOW);
-        digitalWrite(IN3, LOW);
-        analogWrite(ENA, 0); // Stop the motor
-    }
-}
+const unsigned long motorRunTime = 1500;
 
 void setup() {
-    // Initialize motor control pins
-    pinMode(IN2, OUTPUT);
-    pinMode(IN3, OUTPUT);
-    pinMode(ENA, OUTPUT);
-    digitalWrite(IN2, LOW);
-    digitalWrite(IN3, LOW);
-    analogWrite(ENA, 0);
+  // Initialize serial and wait for port to open:
+  Serial.begin(9600);
+  // This delay gives the chance to wait for a Serial Monitor without blocking if none is found
+  delay(1500);
 
-    // Initialize LED pins
-    pinMode(RED_LED, OUTPUT);
-    pinMode(GREEN_LED, OUTPUT);
-    digitalWrite(RED_LED, LOW);
-    digitalWrite(GREEN_LED, HIGH); // Default to door closed
+  // Defined in thingProperties.h
+  initProperties();
 
-    unsigned long startMillis = millis();
-    while (!Serial && (millis() - startMillis) < 3000) {
-        // Wait for Serial to connect or timeout after 3 seconds
-    }
+  // Connect to Arduino IoT Cloud
+  ArduinoCloud.begin(ArduinoIoTPreferredConnection);
 
-    Serial.begin(9600);
+  /*
+     The following function allows you to obtain more information
+     related to the state of network and IoT Cloud connection and errors
+     the higher number the more granular information you’ll get.
+     The default is 0 (only errors).
+     Maximum is 4
+  */
+  setDebugMessageLevel(2);
+  ArduinoCloud.printDebugInfo();
 
+  // Initialize motor control pins
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  analogWrite(ENA, 0);
 
-    // Connect to WiFi
-    Serial.print("Attempting to connect to Network named: ");
-    Serial.println(SSID);
-    WiFi.begin(SSID);
-
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.print(".");
-    }
-
-    Serial.println();
-    Serial.println("Connected to network");
-    Serial.print("SSID: ");
-    Serial.println(WiFi.SSID());
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("Signal strength (RSSI):");
-    Serial.print(WiFi.RSSI());
-    Serial.println(" dBm");
-
-    // Initialize Arduino IoT Cloud
-    ArduinoCloud.begin(ArduinoIoTPreferredConnection);
-    setDebugMessageLevel(2);
-    ArduinoCloud.printDebugInfo();
-
-    // Define Thing properties
-    ArduinoCloud.addProperty(doorOpen, READWRITE, ON_CHANGE, onDoorOpenChange);
+  // Initialize LED pins
+  pinMode(RED_LED, OUTPUT);
+  pinMode(GREEN_LED, OUTPUT);
+  digitalWrite(RED_LED, LOW);
+  digitalWrite(GREEN_LED, HIGH); // Default to door closed
 }
 
 void loop() {
-    ArduinoCloud.update();
+  ArduinoCloud.update();
+  // Your code here
+}
 
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("Wi-Fi connection lost. Reconnecting...");
-        while (WiFi.status() != WL_CONNECTED) {
-            delay(1000);
-            Serial.print(".");
-        }
-        Serial.println();
-        Serial.println("Reconnected to network");
-    }
+/*
+  Since DoorOpen is READ_WRITE variable, onDoorOpenChange() is
+  executed every time a new value is received from IoT Cloud.
+*/
+void onDoorOpenChange()  {
+  Serial.print("Door state changed to: ");
+  Serial.println(doorOpen ? "Open" : "Closed");
+
+  if (doorOpen) {
+      digitalWrite(IN1, HIGH);
+      digitalWrite(IN2, LOW);
+      analogWrite(ENA, 150); // Full speed
+      digitalWrite(RED_LED, HIGH); // Turn on red LED
+      digitalWrite(GREEN_LED, LOW);  // Turn off green LED
+      delay(motorRunTime); // Run motor for specified duration
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, LOW);
+      analogWrite(ENA, 0); // Stop the motor
+  } else {
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, HIGH);
+      analogWrite(ENA, 115); // Full speed
+      digitalWrite(RED_LED, LOW);  // Turn off red LED
+      digitalWrite(GREEN_LED, HIGH); // Turn on green LED
+      delay(1000); // Run motor for specified duration
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, LOW);
+      analogWrite(ENA, 0); // Stop the motor
+  }
 }
