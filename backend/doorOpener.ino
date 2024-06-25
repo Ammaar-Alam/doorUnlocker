@@ -22,7 +22,7 @@ void setup() {
 
   // connecitng to Arduino IoT Cloud
   ArduinoCloud.begin(ArduinoIoTPreferredConnection);
-  setDebugMessageLevel(2);
+  setDebugMessageLevel(4);
   ArduinoCloud.printDebugInfo();
 
   // initializing motor control pins
