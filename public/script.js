@@ -62,11 +62,22 @@ document.addEventListener("DOMContentLoaded", function () {
     updateStatus();
   }
 
+  function emergencyClose() {
+    sendCommand("close");
+  }
+
   const doorSwitch = document.getElementById("doorSwitch");
   if (doorSwitch) {
     doorSwitch.onclick = toggleSwitch;
     updateStatus(); // Initialize the status on page load
   } else {
     console.error("doorSwitch element not found");
+  }
+
+  const emergencyCloseButton = document.getElementById("emergencyCloseButton");
+  if (emergencyCloseButton) {
+    emergencyCloseButton.onclick = emergencyClose;
+  } else {
+    console.error("emergencyCloseButton element not found");
   }
 });

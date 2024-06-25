@@ -105,7 +105,7 @@ main {
     width: 36px;
     left: 4px;
     bottom: 4px;
-    background-color: #2b2d42; /* Space Cadet */
+    background-color: #2b2d42; /* "Space Cadet" */
     transition: 0.4s;
     border-radius: 50%;
 }
@@ -150,12 +150,12 @@ input:not(:checked) ~ #open {
     line-height: 1.6;
     margin-bottom: 20px;
     text-align: justify;
-    color: #f8f7f9; /* Seasalt */
+    color: #f8f7f9; /* "Seasalt" */
 }
 
-.disclaimer {
+.info p.disclaimer {
     font-family: "Roboto", sans-serif;
-    color: #92dce5; /* Non Photo Blue */
+    color: #92dce5; /* "Non Photo Blue" */
     text-align: center;
     font-size: 12px;
 }
@@ -236,4 +236,20 @@ footer p {
     .info h2 {
         font-size: 24px;
     }
+}
+#emergencyCloseButton {
+    background-color: #ff0d00; /* red */
+    color: #f8f7f9; /* seasalt */
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+#emergencyCloseButton:hover {
+    background-color: #b80900; /* this colour is called "engineering orange" lol seems fitting */
 }
