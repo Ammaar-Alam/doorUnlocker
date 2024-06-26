@@ -60,6 +60,7 @@ app.post("/command", async (req, res) => {
   }
 });
 
+// emergency close endpoint
 app.post("/emergency-close", async (req, res) => {
   try {
     const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
@@ -106,6 +107,7 @@ app.post("/emergency-close", async (req, res) => {
   }
 });
 
+// open command endpoint for shortcut api
 app.post("/open", async (req, res) => {
   try {
     const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
@@ -152,6 +154,7 @@ app.post("/open", async (req, res) => {
   }
 });
 
+// close command endpoint for shortcut api
 app.post("/close", async (req, res) => {
   try {
     const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
@@ -198,6 +201,7 @@ app.post("/close", async (req, res) => {
   }
 });
 
+// door status endpoint for shortcut api
 app.get("/status", async (req, res) => {
   try {
     const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
