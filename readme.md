@@ -1,10 +1,6 @@
-Here's a detailed and comprehensive README file for your GitHub repository:
-
----
-
 # Smart Dorm Door Control System
 
-This repository contains the code, schematics, and documentation for a smart dorm room door control system. The system uses an Arduino Nano RP2040 Connect, a motor driver (L298N), and a DC motor to remotely open and close a dorm room door. The project leverages Arduino IoT Cloud for remote control via WiFi and Bluetooth Low Energy (BLE).
+This repository contains the code, schematics, and documentation for a smart dorm room door control system. The system uses an Arduino Nano ESP32 Connect, a motor driver (L298N), and a DC motor to remotely open and close a dorm room door. The project leverages Arduino IoT Cloud for remote control via WiFi and Bluetooth Low Energy (BLE).
 
 ## Table of Contents
 
@@ -34,7 +30,7 @@ This project was developed to remotely control the opening and closing of a dorm
 
 ## Components
 
-- Arduino Nano RP2040 Connect
+- Arduino Nano ESP32 Connect
 - L298N Motor Driver
 - 24V DC Motor
 - Power Supply (12V and 24V)
@@ -49,7 +45,7 @@ This project was developed to remotely control the opening and closing of a dorm
 1. **Power Supply:**
    - Connect the 24V power supply to the L298N motor driver.
    - Ensure the 5V jumper on the L298N is removed.
-   - Use a DC-DC buck converter to step down 24V to 5V for the Arduino Nano RP2040 Connect.
+   - Use a DC-DC buck converter to step down 24V to 5V for the Arduino Nano ESP32 Connect.
 
 2. **Motor Driver Connections:**
    - Connect the 24V DC motor to the OUT1 and OUT2 terminals of the L298N.
@@ -73,7 +69,7 @@ This project was developed to remotely control the opening and closing of a dorm
 
 2. **Arduino IoT Cloud:**
    - Create an account on [Arduino IoT Cloud](https://create.arduino.cc/iot).
-   - Define a new device and link it to your Arduino Nano RP2040 Connect.
+   - Define a new device and link it to your Arduino Nano ESP32 Connect.
    - Create a property named `doorOpen` of type `boolean` with read/write permissions.
 
 3. **Web Interface:**
@@ -333,7 +329,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
    - **Solution:** Ensure the motor and driver are compatible in terms of voltage and current ratings. Use proper heat sinks if necessary.
 
 ### 6. **Soldering VUSB Pads**
-   - **Issue:** Enabling 5V output on Arduino Nano RP2040 Connect.
+   - **Issue:** Enabling 5V output on Arduino Nano ESP32 Connect.
    - **Solution:** Solder the VUSB pads as shown in the Arduino documentation. If soldering tools are not available, seek help from someone experienced.
 
 ### 7. **Miscellaneous Hardware Issues**
