@@ -1,4 +1,4 @@
-Motor: https://a.co/d/589BPEK
-Microcontroller: https://a.co/d/11bIht7
-Motor Driver: https://a.co/d/hDuEwef
+Motor: https://a.co/d/589BPEK || i switched to the 24V 460RPM version, although the one listed is entirely fine, just a bit slower
+Microcontroller: https://www.amazon.com/dp/B0C947BHK5
+Motor Driver: https://a.co/d/hDuEwef || L298N can handle up to 35V so it's fine for either motor
 Wall Adhesion: https://a.co/d/3m5qMEm
