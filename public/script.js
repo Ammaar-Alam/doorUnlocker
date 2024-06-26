@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const doorSwitch = document.getElementById("doorSwitch");
   if (doorSwitch) {
     doorSwitch.onclick = toggleSwitch;
-    updateStatus(); // Initialize the status on page load
+    updateStatus(); // initialize the status on page load
   } else {
     console.error("doorSwitch element not found");
   }
