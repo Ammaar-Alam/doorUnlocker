@@ -207,10 +207,18 @@ app.get("/status", async (req, res) => {
       },
       body: JSON.stringify({}),
     });
+
+    if (!tokenResponse.ok) {
+      const errorDetail = await tokenResponse.text();
+      console.error("Failed to get access token:", errorDetail);
+      res.status(500).send("Failed to get access token");
+      return;
+    }
+
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    const statusResponse = await fetch(
+    const response = await fetch(
       `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}`,
       {
         method: "GET",
@@ -221,15 +229,15 @@ app.get("/status", async (req, res) => {
       },
     );
 
-    if (!statusResponse.ok) {
-      const errorDetail = await statusResponse.text();
-      console.error("Failed to get status:", errorDetail);
-      res.status(500).send("Internal Server Error");
+    if (!response.ok) {
+      const errorDetail = await response.text();
+      console.error("Failed to get property status:", errorDetail);
+      res.status(500).send("Failed to get property status");
       return;
     }
 
-    const statusData = await statusResponse.json();
-    res.json({ value: statusData.value });
+    const status = await response.json();
+    res.json({ doorOpen: status.last_value });
   } catch (error) {
     console.error("Error fetching status:", error);
     res.status(500).send("Internal Server Error");
