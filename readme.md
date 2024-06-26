@@ -1,7 +1,3 @@
-Here's a detailed and comprehensive README file for your GitHub repository:
-
----
-
 # Smart Dorm Door Control System
 
 This repository contains the code, schematics, and documentation for a smart dorm room door control system. The system uses an Arduino Nano RP2040 Connect, a motor driver (L298N), and a DC motor to remotely open and close a dorm room door. The project leverages Arduino IoT Cloud for remote control via WiFi and Bluetooth Low Energy (BLE).
