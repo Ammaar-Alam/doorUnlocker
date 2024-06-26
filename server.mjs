@@ -198,6 +198,44 @@ app.post("/close", async (req, res) => {
   }
 });
 
+app.get("/status", async (req, res) => {
+  try {
+    const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    const statusResponse = await fetch(
+      `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (!statusResponse.ok) {
+      const errorDetail = await statusResponse.text();
+      console.error("Failed to get status:", errorDetail);
+      res.status(500).send("Internal Server Error");
+      return;
+    }
+
+    const statusData = await statusResponse.json();
+    res.json({ value: statusData.value });
+  } catch (error) {
+    console.error("Error fetching status:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
