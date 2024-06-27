@@ -1,17 +1,15 @@
+import java.io.IOException;
 import okhttp3.*;
 import org.json.JSONObject;
 import spark.Spark;
 
-import java.io.IOException;
-
 public class ArduinoCloudControl {
 
     private static final String BASE_URL = "https://api2.arduino.cc/iot/v2";
-    private static final String CLIENT_ID = "LrCg71iVReH2gvzTxast5jGBe1dlhpX7";
-    private static final String CLIENT_SECRET =
-        "7KHl3gqG2joOzf5Uq5eCFAumyQj4TGxcT0QFrPuMjfJ6uMf3lO4PcJtaj1YX0Wg2";
-    private static final String DEVICE_ID = "0f91b9e4-a0db-48b7-8bfd-83ebc031e134";
-    private static final String PROPERTY_ID = "5b833938-8257-4c8a-9e35-f473a56d60f1";
+    private static final String CLIENT_ID = "Lrxxxxxxx";
+    private static final String CLIENT_SECRET = "7KHxxxxxxxx";
+    private static final String DEVICE_ID = "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxx";
+    private static final String PROPERTY_ID = "xxxxxxxxx-xxx-xxx-xxx-xxxxxxx";
 
     private OkHttpClient client;
     private String accessToken;
@@ -50,14 +48,7 @@ public class ArduinoCloudControl {
         );
 
         Request request = new Request.Builder()
-            .url(
-                BASE_URL +
-                "/things/" +
-                DEVICE_ID +
-                "/properties/" +
-                PROPERTY_ID +
-                "/publish"
-            )
+            .url(BASE_URL + "/things/" + DEVICE_ID + "/properties/" + PROPERTY_ID + "/publish")
             .put(body)
             .addHeader("Authorization", "Bearer " + accessToken)
             .build();
