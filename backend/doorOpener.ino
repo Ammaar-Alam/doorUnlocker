@@ -1,6 +1,6 @@
 #include "thingProperties.h"
 
-// Motor control pins
+// motor control pins
 const int IN1 = 2;
 const int IN2 = 3;
 const int ENA = 9; // uses digital/pwn pins
@@ -9,8 +9,12 @@ const int ENA = 9; // uses digital/pwn pins
 #define RED_LED LED_GREEN  // correct pin values using nano esp32
 #define GREEN_LED LED_RED  //
 
-// Motor run duration in milliseconds
+// motor run duration in milliseconds
 const unsigned long motorRunTime = 1500;
+
+// keepAlive interval in milliseconds
+const unsigned long keepAliveInterval = 300000; // 5 mins
+unsigned long lastKeepAliveUpdate = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -42,6 +46,13 @@ void setup() {
 
 void loop() {
   ArduinoCloud.update();
+
+  // send keepAlive update to prevent low-activity mode on cloud
+  if (millis() - lastKeepAliveUpdate  > keepAliveInterval) {
+    keepAlive = !keepAlive;
+    ArduinoCloud.update();
+    lastKeepAliveUpdate = millis();
+  }
 }
 
 void onDoorOpenChange()  {
@@ -69,4 +80,9 @@ void onDoorOpenChange()  {
       digitalWrite(IN2, LOW);
       analogWrite(ENA, 0); // stop the motor
   }
+}
+
+void onKeepAliveChange()  {
+  // nothing needs to be done; variable is just used to keep the IoT connection active /
+  // stop it from entering a low-activity state
 }
