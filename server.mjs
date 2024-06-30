@@ -153,7 +153,7 @@ function startPeriodicToggle() {
     } catch (error) {
       console.error("Error in periodic toggle:", error);
     }
-  }, 1800000); // toggle every 1/2 hour (3600000 milliseconds)
+  }, 900000); // toggle every 15mins (milliseconds)
 }
 
 startPeriodicToggle();
