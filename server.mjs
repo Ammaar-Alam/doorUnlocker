@@ -72,11 +72,21 @@ app.post("/login", (req, res) => {
 function checkAuth(req, res, next) {
   const token = req.headers["authorization"];
   if (token) {
-    req.sessionID = token;
-    req.session.authenticated = true;
-    return next();
+    // Find the session based on the token (which is the session ID)
+    req.sessionStore.get(token, (err, session) => {
+      if (err) {
+        console.error("Session retrieval error:", err);
+        return res.status(500).json({ message: "Internal Server Error" });
+      }
+      if (session && session.authenticated) {
+        req.session = session;
+        return next();
+      } else {
+        return res.status(403).json({ message: "Not authenticated" });
+      }
+    });
   } else {
-    res.status(403).json({ message: "Not authenticated" });
+    res.status(403).json({ message: "No token provided" });
   }
 }
 
@@ -99,7 +109,25 @@ app.post("/token", checkAuth, async (req, res) => {
 
 app.post("/command", checkAuth, async (req, res) => {
   try {
-    const { accessToken, command } = req.body;
+    const { command } = req.body;
+    const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!tokenResponse.ok) {
+      const errorDetail = await tokenResponse.text();
+      console.error("Failed to get access token:", errorDetail);
+      res.status(500).send("Failed to get access token");
+      return;
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
     const response = await fetch(
       `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
       {
@@ -115,7 +143,7 @@ app.post("/command", checkAuth, async (req, res) => {
     if (!response.ok) {
       const errorDetail = await response.text();
       console.error("Failed to update property:", errorDetail);
-      res.status(500).send("Internal Server Error");
+      res.status(500).send("Failed to update property");
       return;
     }
 
