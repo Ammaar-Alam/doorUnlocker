@@ -24,10 +24,17 @@ app.use(
   session({
     secret: SECRET_KEY,
     resave: false,
-    saveUninitialized: false, // This needs to be false to avoid creating sessions for unauthenticated users
+    saveUninitialized: true,
     cookie: { secure: false }, // Use true if HTTPS is enabled
   }),
 );
+
+// Logging middleware to check session
+app.use((req, res, next) => {
+  console.log(`Session ID: ${req.sessionID}`);
+  console.log(`Session: ${JSON.stringify(req.session)}`);
+  next();
+});
 
 // Login route
 app.post("/login", (req, res) => {
@@ -38,6 +45,7 @@ app.post("/login", (req, res) => {
       if (err) {
         res.status(500).json({ message: "Internal Server Error" });
       } else {
+        console.log(`Login successful, session ID: ${req.sessionID}`);
         res.status(200).json({ token: req.sessionID, message: "Login successful" });
       }
     });
@@ -48,6 +56,7 @@ app.post("/login", (req, res) => {
 
 // Middleware to check authentication
 function checkAuth(req, res, next) {
+  console.log(`Authenticated: ${req.session.authenticated}`);
   if (req.session.authenticated) {
     return next();
   } else {
