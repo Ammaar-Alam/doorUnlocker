@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem("authToken", data.token); // Store the token
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
       } else {
@@ -27,37 +29,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function sendCommand(command) {
     try {
-      const tokenResponse = await fetch("/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (!tokenResponse.ok) {
-        const errorDetail = await tokenResponse.text();
-        console.error("Failed to get access token:", errorDetail);
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error("No auth token found. Please log in again.");
         return;
       }
-
-      const tokenData = await tokenResponse.json();
-      const accessToken = tokenData.access_token;
 
       const response = await fetch("/command", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: token,
         },
-        body: JSON.stringify({
-          accessToken,
-          command,
-        }),
+        body: JSON.stringify({ command }),
       });
 
       if (!response.ok) {
         const errorDetail = await response.text();
-        console.error("Failed to update property:", errorDetail);
+        console.error("Failed to send command:", errorDetail);
         return;
       }
 
@@ -88,8 +77,32 @@ document.addEventListener("DOMContentLoaded", function () {
     updateStatus();
   }
 
-  function emergencyClose() {
-    sendCommand("close");
+  async function emergencyClose() {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error("No auth token found. Please log in again.");
+        return;
+      }
+
+      const response = await fetch("/emergency-close", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+      });
+
+      if (!response.ok) {
+        const errorDetail = await response.text();
+        console.error("Failed to send emergency close command:", errorDetail);
+        return;
+      }
+
+      console.log(await response.text());
+    } catch (error) {
+      console.error("Error during emergency close request:", error);
+    }
   }
 
   const doorSwitch = document.getElementById("doorSwitch");
