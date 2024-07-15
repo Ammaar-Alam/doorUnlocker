@@ -2,6 +2,7 @@ import express from "express";
 import session from "express-session";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser"; // Add this line
 
 dotenv.config();
 
@@ -19,13 +20,18 @@ app.use(express.static("public"));
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+app.use(cookieParser()); // Add this line
 
 app.use(
   session({
     secret: SECRET_KEY,
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }, // Use true if HTTPS is enabled
+    saveUninitialized: false, // Change this to false
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
   }),
 );
 
@@ -45,8 +51,7 @@ app.post("/login", (req, res) => {
       if (err) {
         res.status(500).json({ message: "Internal Server Error" });
       } else {
-        console.log(`Login successful, session ID: ${req.sessionID}`);
-        res.status(200).json({ token: req.sessionID, message: "Login successful" });
+        res.status(200).json({ message: "Login successful" });
       }
     });
   } else {
