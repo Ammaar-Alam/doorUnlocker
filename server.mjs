@@ -28,9 +28,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: true, // Since you're using HTTPS
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: "none", // Allow cross-site cookie
+      domain: ".ammaar.xyz", // Notice the dot before the domain
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   }),
