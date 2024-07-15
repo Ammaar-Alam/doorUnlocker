@@ -59,7 +59,7 @@ app.post("/login", (req, res) => {
         console.log("Login successful, session ID:", req.sessionID);
         res.status(200).json({
           message: "Login successful",
-          sessionId: req.sessionID,
+          token: req.sessionID, // Send the session ID as a token
         });
       }
     });
@@ -70,10 +70,10 @@ app.post("/login", (req, res) => {
 
 // Middleware to check authentication
 function checkAuth(req, res, next) {
-  console.log("Session:", req.session);
-  console.log("SessionID:", req.sessionID);
-  console.log("Authenticated:", req.session.authenticated);
-  if (req.session.authenticated) {
+  const token = req.headers["authorization"];
+  if (token) {
+    req.sessionID = token;
+    req.session.authenticated = true;
     return next();
   } else {
     res.status(403).json({ message: "Not authenticated" });
