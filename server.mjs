@@ -2,9 +2,6 @@ import express from "express";
 import session from "express-session";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import cookieParser from "cookie-parser";
-import bodyParser from "body-parser";
-import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -22,41 +19,34 @@ app.use(express.static("public"));
 
 // Middleware to parse JSON bodies
 app.use(express.json());
-app.use(cookieParser());
-app.use(bodyParser.json());
 
-const createToken = (password) => {
-  if (password === PASSWORD) {
-    return jwt.sign({ password }, SECRET_KEY, { expiresIn: "1h" });
-  }
-  return null;
-};
+app.use(
+  session({
+    secret: SECRET_KEY,
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }, // Use true if HTTPS is enabled
+  }),
+);
 
 // Login route
 app.post("/login", (req, res) => {
   const { password } = req.body;
-  const token = createToken(password);
-  if (token) {
-    res.cookie("token", token, { httpOnly: true });
-    res.json({ message: "Login Successful" });
+  if (password === PASSWORD) {
+    req.session.authenticated = true;
+    res.status(200).json({ token: req.sessionID, message: "Login successful" });
   } else {
-    res.status(401).json({ message: "Invalid Password" });
+    res.status(401).json({ message: "Invalid password" });
   }
 });
 
 // Middleware to check authentication
 function checkAuth(req, res, next) {
-  const token = req.cookies.token;
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorized" });
+  if (req.session.authenticated) {
+    return next();
+  } else {
+    res.status(403).json({ message: "Not authenticated" });
   }
-
-  jwt.verify(token, SECRET_KEY, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    next();
-  });
 }
 
 app.post("/token", checkAuth, async (req, res) => {
@@ -285,7 +275,7 @@ app.get("/status", checkAuth, async (req, res) => {
     res.json({ doorOpen: status.last_value });
   } catch (error) {
     console.error("Error fetching status:", error);
-    res.status.send("Internal Server Error");
+    res.status(500).send("Internal Server Error");
   }
 });
 
