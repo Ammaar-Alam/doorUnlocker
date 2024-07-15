@@ -2,7 +2,7 @@ import express from "express";
 import session from "express-session";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
-import cookieParser from "cookie-parser"; // Add this line
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -20,14 +20,22 @@ app.use(express.static("public"));
 
 // Middleware to parse JSON bodies
 app.use(express.json());
-app.use(cookieParser()); // Add this line
+app.use(cookieParser());
+
+// Trust first proxy for Heroku
+app.set("trust proxy", 1);
 
 app.use(
   session({
     secret: SECRET_KEY,
     resave: false,
-    saveUninitialized: false, // Change this to false
-    cookie: { secure: false }, // Use true if HTTPS is enabled
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
   }),
 );
 
@@ -45,10 +53,14 @@ app.post("/login", (req, res) => {
     req.session.authenticated = true;
     req.session.save((err) => {
       if (err) {
+        console.error("Session save error:", err);
         res.status(500).json({ message: "Internal Server Error" });
       } else {
-        console.log(`Login successful, session ID: ${req.sessionID}`);
-        res.status(200).json({ token: req.sessionID, message: "Login successful" });
+        console.log("Login successful, session ID:", req.sessionID);
+        res.status(200).json({
+          message: "Login successful",
+          sessionId: req.sessionID,
+        });
       }
     });
   } else {
@@ -58,7 +70,9 @@ app.post("/login", (req, res) => {
 
 // Middleware to check authentication
 function checkAuth(req, res, next) {
-  console.log(`Authenticated: ${req.session.authenticated}`);
+  console.log("Session:", req.session);
+  console.log("SessionID:", req.sessionID);
+  console.log("Authenticated:", req.session.authenticated);
   if (req.session.authenticated) {
     return next();
   } else {
