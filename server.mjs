@@ -26,10 +26,11 @@ app.use(
   session({
     secret: SECRET_KEY,
     resave: false,
-    saveUninitialized: false, // Change this to false
+    saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
+      sameSite: "strict",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   }),
@@ -61,7 +62,8 @@ app.post("/login", (req, res) => {
 
 // Middleware to check authentication
 function checkAuth(req, res, next) {
-  console.log(`Authenticated: ${req.session.authenticated}`);
+  console.log("Session:", req.session);
+  console.log("Authenticated:", req.session.authenticated);
   if (req.session.authenticated) {
     return next();
   } else {
