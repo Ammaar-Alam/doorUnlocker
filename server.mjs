@@ -17,6 +17,10 @@ const SECRET_KEY = process.env.SECRET_KEY;
 // Serve static files from the "public" directory
 app.use(express.static("public"));
 
+// Stuff for creating the cookies for shortcut API and iOS apps
+app.use(cookieParser());
+app.use(bodyParser.json());
+
 // Middleware to parse JSON bodies
 app.use(express.json());
 
@@ -29,25 +33,47 @@ app.use(
   }),
 );
 
+const createToken = (password) => {
+  if (password === process.env.AUTH_PASSWORD) {
+    return jwt.sign({ password }, secretKey, { expiresIn: "1h" });
+  }
+  return null;
+};
+
 // Login route
 app.post("/login", (req, res) => {
   const { password } = req.body;
-  if (password === PASSWORD) {
-    req.session.authenticated = true;
-    res.status(200).send("Login successful");
+  const token = createToken(password);
+  if (token) {
+    res.cookie("token", token, { httpOnly: true });
+    res.json({ message: "Login Successful" });
   } else {
-    res.status(401).send("Invalid password");
+    res.status(401).json({ message: "Invalid Password" });
   }
 });
 
-// Middleware to check authentication
-function checkAuth(req, res, next) {
-  if (req.session.authenticated) {
-    return next();
-  } else {
-    res.status(403).send("Not authenticated");
+const authenticate = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
-}
+
+  jwt.verify(token, secretKey, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  });
+};
+
+// Middleware to check authentication
+// function checkAuth(req, res, next) {
+//   if (req.session.authenticated) {
+//     return next();
+//   } else {
+//     res.status(403).send("Not authenticated");
+//   }
+// }
 
 app.post("/token", checkAuth, async (req, res) => {
   try {
