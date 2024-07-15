@@ -4,7 +4,7 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
-import checkAuth from "check-auth";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 
@@ -20,25 +20,14 @@ const SECRET_KEY = process.env.SECRET_KEY;
 // Serve static files from the "public" directory
 app.use(express.static("public"));
 
-// Stuff for creating the cookies for shortcut API and iOS apps
+// Middleware to parse JSON bodies
+app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.json());
 
-// Middleware to parse JSON bodies
-app.use(express.json());
-
-app.use(
-  session({
-    secret: SECRET_KEY,
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }, // Use true if HTTPS is enabled
-  }),
-);
-
 const createToken = (password) => {
-  if (password === process.env.AUTH_PASSWORD) {
-    return jwt.sign({ password }, secretKey, { expiresIn: "1h" });
+  if (password === PASSWORD) {
+    return jwt.sign({ password }, SECRET_KEY, { expiresIn: "1h" });
   }
   return null;
 };
@@ -55,28 +44,20 @@ app.post("/login", (req, res) => {
   }
 });
 
-const authenticate = (req, res, next) => {
+// Middleware to check authentication
+function checkAuth(req, res, next) {
   const token = req.cookies.token;
   if (!token) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  jwt.verify(token, secretKey, (err, decoded) => {
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
     if (err) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     next();
   });
-};
-
-// Middleware to check authentication
-// function checkAuth(req, res, next) {
-//   if (req.session.authenticated) {
-//     return next();
-//   } else {
-//     res.status(403).send("Not authenticated");
-//   }
-// }
+}
 
 app.post("/token", checkAuth, async (req, res) => {
   try {
@@ -304,7 +285,7 @@ app.get("/status", checkAuth, async (req, res) => {
     res.json({ doorOpen: status.last_value });
   } catch (error) {
     console.error("Error fetching status:", error);
-    res.status(500).send("Internal Server Error");
+    res.status.send("Internal Server Error");
   }
 });
 
