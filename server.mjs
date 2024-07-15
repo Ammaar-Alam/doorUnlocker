@@ -26,14 +26,8 @@ app.use(
   session({
     secret: SECRET_KEY,
     resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: true, // Since you're using HTTPS
-      httpOnly: true,
-      sameSite: "none", // Allow cross-site cookie
-      domain: ".ammaar.xyz", // Notice the dot before the domain
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
+    saveUninitialized: false, // Change this to false
+    cookie: { secure: false }, // Use true if HTTPS is enabled
   }),
 );
 
@@ -53,7 +47,8 @@ app.post("/login", (req, res) => {
       if (err) {
         res.status(500).json({ message: "Internal Server Error" });
       } else {
-        res.status(200).json({ message: "Login successful" });
+        console.log(`Login successful, session ID: ${req.sessionID}`);
+        res.status(200).json({ token: req.sessionID, message: "Login successful" });
       }
     });
   } else {
@@ -63,8 +58,7 @@ app.post("/login", (req, res) => {
 
 // Middleware to check authentication
 function checkAuth(req, res, next) {
-  console.log("Session:", req.session);
-  console.log("Authenticated:", req.session.authenticated);
+  console.log(`Authenticated: ${req.session.authenticated}`);
   if (req.session.authenticated) {
     return next();
   } else {
