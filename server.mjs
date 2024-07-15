@@ -1,14 +1,18 @@
 import express from "express";
 import session from "express-session";
 import fetch from "node-fetch";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-const thingId = "3701b014-1907-43d6-b82f-c91b47d74595";
-const propertyId = "3522883b-1bb8-45dc-8a58-e7d58f46308e";
-const proxyServerUrl = "https://proxy-server-alam-ec4f553c366a.herokuapp.com";
-const PASSWORD = process.env.PASSWORD || "Always117"; // Store this securely
+const thingId = process.env.THING_ID;
+const propertyId = process.env.PROPERTY_ID;
+const proxyServerUrl = process.env.PROXY_SERVER_URL;
+const PASSWORD = process.env.PASSWORD;
+const SECRET_KEY = process.env.SECRET_KEY;
 
 // Serve static files from the "public" directory
 app.use(express.static("public"));
@@ -18,7 +22,7 @@ app.use(express.json());
 
 app.use(
   session({
-    secret: "your_secret_key", // Replace with a secure secret key
+    secret: SECRET_KEY,
     resave: false,
     saveUninitialized: true,
     cookie: { secure: false }, // Use true if HTTPS is enabled
