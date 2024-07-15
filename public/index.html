@@ -16,7 +16,17 @@
             <h1>Ammaar's Dorm Room Controls</h1>
         </header>
         <main>
-            <section class="control-panel">
+            <section id="login-section">
+                <h2>Login</h2>
+                <form id="login-form">
+                    <input type="password" id="password" placeholder="Enter password" required />
+                    <button type="submit">Login</button>
+                </form>
+                <p id="login-error" style="color: red; display: none">
+                    Invalid password. Please try again.
+                </p>
+            </section>
+            <section class="control-panel" style="display: none">
                 <h2>Door Status</h2>
                 <div class="toggle-container">
                     <span class="status-text" id="closed">CLOSED</span>

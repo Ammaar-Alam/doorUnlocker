@@ -1,4 +1,30 @@
 document.addEventListener("DOMContentLoaded", function () {
+  async function handleLogin(event) {
+    event.preventDefault();
+    const password = document.getElementById("password").value;
+    try {
+      const response = await fetch("/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      if (response.ok) {
+        document.querySelector("#login-section").style.display = "none";
+        document.querySelector(".control-panel").style.display = "block";
+      } else {
+        document.getElementById("login-error").style.display = "block";
+      }
+    } catch (error) {
+      console.error("Error during login request:", error);
+      document.getElementById("login-error").style.display = "block";
+    }
+  }
+
+  document.getElementById("login-form").addEventListener("submit", handleLogin);
+
   async function sendCommand(command) {
     try {
       const tokenResponse = await fetch("/token", {
