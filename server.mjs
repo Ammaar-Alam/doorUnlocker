@@ -341,3 +341,8 @@ app.get("/status", checkAuth, async (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+// this code lets the IOS shortcut not wait 30 seconds for the server timeout
+// it's a bandaid fix but idrk how to fix the server not closing the connection
+server.keepAliveTimeout = 1000; // 1 second
+server.headersTimeout = 1000; // 1 seconds
