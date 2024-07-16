@@ -10,7 +10,7 @@ const int ENA = 9; // uses digital/pwn pins
 #define GREEN_LED LED_RED  //
 
 // motor run duration in milliseconds
-const unsigned long motorRunTime = 1500;
+const unsigned long motorRunTime = 1000;
 
 // keepAlive interval in milliseconds
 const unsigned long keepAliveInterval = 300000; // 5 mins
@@ -62,7 +62,7 @@ void onDoorOpenChange()  {
   if (doorOpen) {
       digitalWrite(IN1, HIGH);
       digitalWrite(IN2, LOW);
-      analogWrite(ENA, 175); // ADJUSTABLE speed; current speed works best as it doesn't allow the motor to overtorque the string
+      analogWrite(ENA, 165); // ADJUSTABLE speed; current speed works best as it doesn't allow the motor to overtorque the string
       digitalWrite(RED_LED, HIGH); // turn on RED led
       digitalWrite(GREEN_LED, LOW);  // turn off GREEN led
       delay(motorRunTime); // run motor for specified duration
@@ -75,7 +75,7 @@ void onDoorOpenChange()  {
       analogWrite(ENA, 115); // ADJUSTABLE speed; found to work well w/o allowing motor to over-tangle in opposite way
       digitalWrite(RED_LED, LOW);  // turn off RED led
       digitalWrite(GREEN_LED, HIGH); // turn on GREEN led
-      delay(850); // runtime less than OPEN door to prevent string from un-furling (don't have a spool attachment rn)
+      delay(750); // runtime less than OPEN door to prevent string from un-furling (don't have a spool attachment rn)
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, LOW);
       analogWrite(ENA, 0); // stop the motor
