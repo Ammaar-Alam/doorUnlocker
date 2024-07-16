@@ -338,7 +338,7 @@ app.get("/status", checkAuth, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
