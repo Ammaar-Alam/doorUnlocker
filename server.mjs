@@ -103,7 +103,7 @@ app.post("/token", checkAuth, async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Error fetching token:", error);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error").end();
   }
 });
 
@@ -150,7 +150,7 @@ app.post("/command", checkAuth, async (req, res) => {
     res.send("Command sent successfully");
   } catch (error) {
     console.error("Error sending command:", error);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error").end();
   }
 });
 
@@ -193,10 +193,10 @@ app.post("/emergency-close", checkAuth, async (req, res) => {
       return;
     }
 
-    res.send("Emergency close command sent successfully");
+    res.status(200).send("Emergency-Close Command sent successfully").end();
   } catch (error) {
     console.error("Error sending emergency close command:", error);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error").end();
   }
 });
 
@@ -239,10 +239,10 @@ app.post("/open", checkAuth, async (req, res) => {
       return;
     }
 
-    res.send("Open command sent successfully");
+    res.status(200).send("Open Command sent successfully").end();
   } catch (error) {
     console.error("Error sending open command:", error);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error").end();
   }
 });
 
@@ -285,10 +285,10 @@ app.post("/close", checkAuth, async (req, res) => {
       return;
     }
 
-    res.send("Close command sent successfully");
+    res.status(200).send("Close Command sent successfully").end();
   } catch (error) {
     console.error("Error sending close command:", error);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error").end();
   }
 });
 
@@ -331,10 +331,10 @@ app.get("/status", checkAuth, async (req, res) => {
     }
 
     const status = await response.json();
-    res.json({ doorOpen: status.last_value });
+    res.status(200).json({ doorOpen: status.last_value }).end();
   } catch (error) {
     console.error("Error fetching status:", error);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send("Internal Server Error").end();
   }
 });
 
