@@ -22,6 +22,12 @@ app.use(express.static("public"));
 app.use(express.json());
 app.use(cookieParser());
 
+// Set Connection header to close
+app.use((req, res, next) => {
+  res.set("Connection", "close");
+  next();
+});
+
 // Trust first proxy for Heroku
 app.set("trust proxy", 1);
 
@@ -31,10 +37,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 24 * 60 * 60 * 1000,
     },
   }),
 );
@@ -54,17 +60,20 @@ app.post("/login", (req, res) => {
     req.session.save((err) => {
       if (err) {
         console.error("Session save error:", err);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(500).json({ message: "Internal Server Error" }).end();
       } else {
         console.log("Login successful, session ID:", req.sessionID);
-        res.status(200).json({
-          message: "Login successful",
-          token: req.sessionID, // Send the session ID as a token
-        });
+        res
+          .status(200)
+          .json({
+            message: "Login successful",
+            token: req.sessionID,
+          })
+          .end();
       }
     });
   } else {
-    res.status(401).json({ message: "Invalid password" });
+    res.status(401).json({ message: "Invalid password" }).end();
   }
 });
 
@@ -72,21 +81,20 @@ app.post("/login", (req, res) => {
 function checkAuth(req, res, next) {
   const token = req.headers["authorization"];
   if (token) {
-    // Find the session based on the token (which is the session ID)
     req.sessionStore.get(token, (err, session) => {
       if (err) {
         console.error("Session retrieval error:", err);
-        return res.status(500).json({ message: "Internal Server Error" });
+        return res.status(500).json({ message: "Internal Server Error" }).end();
       }
       if (session && session.authenticated) {
         req.session = session;
         return next();
       } else {
-        return res.status(403).json({ message: "Not authenticated" });
+        return res.status(403).json({ message: "Not authenticated" }).end();
       }
     });
   } else {
-    res.status(403).json({ message: "No token provided" });
+    res.status(403).json({ message: "No token provided" }).end();
   }
 }
 
@@ -100,196 +108,188 @@ app.post("/token", checkAuth, async (req, res) => {
       body: JSON.stringify({}),
     });
     const data = await response.json();
-    res.json(data);
+    res.json(data).end();
   } catch (error) {
     console.error("Error fetching token:", error);
     res.status(500).send("Internal Server Error").end();
   }
 });
 
-app.post("/command", checkAuth, async (req, res) => {
-  try {
-    const { command } = req.body;
-    const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    });
+app.post("/command", checkAuth, (req, res) => {
+  const { command } = req.body;
+  res.status(200).send("Command received").end();
 
-    if (!tokenResponse.ok) {
-      const errorDetail = await tokenResponse.text();
-      console.error("Failed to get access token:", errorDetail);
-      res.status(500).send("Failed to get access token");
-      return;
-    }
-
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
-
-    const response = await fetch(
-      `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
-      {
-        method: "PUT",
+  (async () => {
+    try {
+      const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
+        method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ value: command === "open" }),
-      },
-    );
+        body: JSON.stringify({}),
+      });
 
-    if (!response.ok) {
-      const errorDetail = await response.text();
-      console.error("Failed to update property:", errorDetail);
-      res.status(500).send("Failed to update property");
-      return;
+      if (!tokenResponse.ok) {
+        const errorDetail = await tokenResponse.text();
+        console.error("Failed to get access token:", errorDetail);
+        return;
+      }
+
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+
+      const response = await fetch(
+        `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ value: command === "open" }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorDetail = await response.text();
+        console.error("Failed to update property:", errorDetail);
+      }
+    } catch (error) {
+      console.error("Error sending command:", error);
     }
-
-    res.send("Command sent successfully");
-  } catch (error) {
-    console.error("Error sending command:", error);
-    res.status(500).send("Internal Server Error").end();
-  }
+  })();
 });
 
-app.post("/emergency-close", checkAuth, async (req, res) => {
-  try {
-    const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    });
+app.post("/emergency-close", checkAuth, (req, res) => {
+  res.status(200).send("Emergency close command received").end();
 
-    if (!tokenResponse.ok) {
-      const errorDetail = await tokenResponse.text();
-      console.error("Failed to get access token:", errorDetail);
-      res.status(500).send("Failed to get access token");
-      return;
-    }
-
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
-
-    const response = await fetch(
-      `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
-      {
-        method: "PUT",
+  (async () => {
+    try {
+      const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
+        method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ value: false }), // Assuming false means closed
-      },
-    );
+        body: JSON.stringify({}),
+      });
 
-    if (!response.ok) {
-      const errorDetail = await response.text();
-      console.error("Failed to update property:", errorDetail);
-      res.status(500).send("Failed to update property");
-      return;
+      if (!tokenResponse.ok) {
+        const errorDetail = await tokenResponse.text();
+        console.error("Failed to get access token:", errorDetail);
+        return;
+      }
+
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+
+      const response = await fetch(
+        `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ value: false }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorDetail = await response.text();
+        console.error("Failed to update property:", errorDetail);
+      }
+    } catch (error) {
+      console.error("Error sending emergency close command:", error);
     }
-
-    res.status(200).send("Emergency-Close Command sent successfully").end();
-  } catch (error) {
-    console.error("Error sending emergency close command:", error);
-    res.status(500).send("Internal Server Error").end();
-  }
+  })();
 });
 
-app.post("/open", checkAuth, async (req, res) => {
-  try {
-    const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    });
+app.post("/open", checkAuth, (req, res) => {
+  res.status(200).send("Open command received").end();
 
-    if (!tokenResponse.ok) {
-      const errorDetail = await tokenResponse.text();
-      console.error("Failed to get access token:", errorDetail);
-      res.status(500).send("Failed to get access token");
-      return;
-    }
-
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
-
-    const response = await fetch(
-      `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
-      {
-        method: "PUT",
+  (async () => {
+    try {
+      const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
+        method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ value: true }), // true means open
-      },
-    );
+        body: JSON.stringify({}),
+      });
 
-    if (!response.ok) {
-      const errorDetail = await response.text();
-      console.error("Failed to update property:", errorDetail);
-      res.status(500).send("Failed to update property");
-      return;
+      if (!tokenResponse.ok) {
+        const errorDetail = await tokenResponse.text();
+        console.error("Failed to get access token:", errorDetail);
+        return;
+      }
+
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+
+      const response = await fetch(
+        `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ value: true }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorDetail = await response.text();
+        console.error("Failed to update property:", errorDetail);
+      }
+    } catch (error) {
+      console.error("Error sending open command:", error);
     }
-
-    res.status(200).send("Open Command sent successfully").end();
-  } catch (error) {
-    console.error("Error sending open command:", error);
-    res.status(500).send("Internal Server Error").end();
-  }
+  })();
 });
 
-app.post("/close", checkAuth, async (req, res) => {
-  try {
-    const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    });
+app.post("/close", checkAuth, (req, res) => {
+  res.status(200).send("Close command received").end();
 
-    if (!tokenResponse.ok) {
-      const errorDetail = await tokenResponse.text();
-      console.error("Failed to get access token:", errorDetail);
-      res.status(500).send("Failed to get access token");
-      return;
-    }
-
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.access_token;
-
-    const response = await fetch(
-      `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
-      {
-        method: "PUT",
+  (async () => {
+    try {
+      const tokenResponse = await fetch(`${proxyServerUrl}/token`, {
+        method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ value: false }), // false means close
-      },
-    );
+        body: JSON.stringify({}),
+      });
 
-    if (!response.ok) {
-      const errorDetail = await response.text();
-      console.error("Failed to update property:", errorDetail);
-      res.status(500).send("Failed to update property");
-      return;
+      if (!tokenResponse.ok) {
+        const errorDetail = await tokenResponse.text();
+        console.error("Failed to get access token:", errorDetail);
+        return;
+      }
+
+      const tokenData = await tokenResponse.json();
+      const accessToken = tokenData.access_token;
+
+      const response = await fetch(
+        `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ value: false }),
+        },
+      );
+
+      if (!response.ok) {
+        const errorDetail = await response.text();
+        console.error("Failed to update property:", errorDetail);
+      }
+    } catch (error) {
+      console.error("Error sending close command:", error);
     }
-
-    res.status(200).send("Close Command sent successfully").end();
-  } catch (error) {
-    console.error("Error sending close command:", error);
-    res.status(500).send("Internal Server Error").end();
-  }
+  })();
 });
 
 app.get("/status", checkAuth, async (req, res) => {
@@ -305,7 +305,7 @@ app.get("/status", checkAuth, async (req, res) => {
     if (!tokenResponse.ok) {
       const errorDetail = await tokenResponse.text();
       console.error("Failed to get access token:", errorDetail);
-      res.status(500).send("Failed to get access token");
+      res.status(500).send("Failed to get access token").end();
       return;
     }
 
@@ -326,7 +326,7 @@ app.get("/status", checkAuth, async (req, res) => {
     if (!response.ok) {
       const errorDetail = await response.text();
       console.error("Failed to get property status:", errorDetail);
-      res.status(500).send("Failed to get property status");
+      res.status(500).send("Failed to get property status").end();
       return;
     }
 
@@ -342,7 +342,5 @@ const server = app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-// this code lets the IOS shortcut not wait 30 seconds for the server timeout
-// it's a bandaid fix but idrk how to fix the server not closing the connection
 server.keepAliveTimeout = 1000; // 1 second
-server.headersTimeout = 1000; // 1 seconds
+server.headersTimeout = 1500; // 1.5 seconds
