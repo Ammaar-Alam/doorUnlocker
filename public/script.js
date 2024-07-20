@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem("authToken", data.token); // Store the token
+        localStorage.setItem("authToken", data.token);
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
       } else {
@@ -24,6 +24,20 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("login-error").style.display = "block";
     }
   }
+
+  document.getElementById("login-form").addEventListener("submit", handleLogin);
+
+  // Check if authentication is required
+  fetch("/auth-status")
+    .then((response) => response.json())
+    .then((data) => {
+      if (!data.authRequired) {
+        // If auth is not required, hide login and show control panel
+        document.querySelector("#login-section").style.display = "none";
+        document.querySelector(".control-panel").style.display = "block";
+      }
+    })
+    .catch((error) => console.error("Error checking auth status:", error));
 
   document.getElementById("login-form").addEventListener("submit", handleLogin);
 

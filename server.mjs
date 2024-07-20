@@ -14,6 +14,7 @@ const propertyId = process.env.PROPERTY_ID;
 const proxyServerUrl = process.env.PROXY_SERVER_URL;
 const PASSWORD = process.env.PASSWORD;
 const SECRET_KEY = process.env.SECRET_KEY;
+const AUTH_REQUIRED = process.env.AUTH_REQUIRED === "true";
 
 app.use(express.static("public"));
 app.use(express.json());
@@ -41,9 +42,15 @@ app.use((req, res, next) => {
   next();
 });
 
+console.log("AUTH_REQUIRED:", AUTH_REQUIRED);
+
+app.get("/auth-status", (req, res) => {
+  res.json({ authRequired: AUTH_REQUIRED });
+});
+
 app.post("/login", (req, res) => {
   const { password } = req.body;
-  if (password === PASSWORD) {
+  if (!AUTH_REQUIRED || password === PASSWORD) {
     req.session.authenticated = true;
     req.session.save((err) => {
       if (err) {
@@ -63,6 +70,10 @@ app.post("/login", (req, res) => {
 });
 
 function checkAuth(req, res, next) {
+  if (!AUTH_REQUIRED) {
+    return next();
+  }
+
   const token = req.headers["authorization"];
   if (token) {
     req.sessionStore.get(token, (err, sessionData) => {
@@ -71,7 +82,6 @@ function checkAuth(req, res, next) {
         return res.status(500).json({ message: "Internal Server Error" });
       }
       if (sessionData && sessionData.authenticated) {
-        // Reconstruct the session
         req.session.authenticated = sessionData.authenticated;
         req.sessionID = token;
         return next();
