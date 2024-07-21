@@ -4,3 +4,4 @@ node_modules
 out
 .DS_Store
 .gitattributes
+*.iml
