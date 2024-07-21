@@ -3,6 +3,7 @@ import session from "express-session";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import axios from "axios";
 
 dotenv.config();
 
@@ -11,10 +12,11 @@ const port = process.env.PORT || 3000;
 
 const thingId = process.env.THING_ID;
 const propertyId = process.env.PROPERTY_ID;
-const proxyServerUrl = process.env.PROXY_SERVER_URL;
 const PASSWORD = process.env.PASSWORD;
 const SECRET_KEY = process.env.SECRET_KEY;
 const AUTH_REQUIRED = process.env.AUTH_REQUIRED === "true";
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 app.use(express.static("public"));
 app.use(express.json());
@@ -95,16 +97,26 @@ function checkAuth(req, res, next) {
 }
 
 async function getAccessToken() {
-  const response = await fetch(`${proxyServerUrl}/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to get access token");
+  try {
+    const response = await axios.post(
+      "https://api2.arduino.cc/iot/v1/clients/token",
+      new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        audience: "https://api2.arduino.cc/iot",
+      }),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      },
+    );
+    return response.data.access_token;
+  } catch (error) {
+    console.error("Error getting access token:", error);
+    throw error;
   }
-  const data = await response.json();
-  return data.access_token;
 }
 
 async function sendCommand(value) {
