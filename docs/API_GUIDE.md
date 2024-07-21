@@ -42,7 +42,7 @@ Most endpoints require authentication. Include the JWT token in the Authorizatio
 - **Method**: `POST`
 - **Auth required**: Yes
 - **Data Constraints**:
-```
+```json
 {
   "command": "[open|close]"
 }
