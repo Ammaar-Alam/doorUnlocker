@@ -2,7 +2,7 @@
 
 An innovative IoT project that revolutionizes dorm room access using cutting-edge technology. This system enables remote control of a physical door lock from anywhere in the world, showcasing a practical application of IoT in everyday life.
 
-**Live Demo:** [My Website](https://door.ammaar.xyz)
+**Live At My Website:** [door.ammaar.xyz](https://door.ammaar.xyz)
 
 This website allows anyone, anywhere in the world, to open or close my dorm room door in real-time. Personally, I've made iPhone shortcuts that use the site's API endpoints so that I can open or close my door right from the lockscreen, or even ask siri to do the same; I barely even remember the dorm-pin on my prox at this point :P
 
