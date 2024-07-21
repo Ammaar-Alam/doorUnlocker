@@ -28,7 +28,7 @@
 ## Troubleshooting
 
 - If the door doesn't respond, check your internet connection.
-- For persistent issues, refer to our [Troubleshooting Guide](TROUBLESHOOTING.md).
+- For persistent issues, refer to my [Troubleshooting Guide](TROUBLESHOOTING.md).
 
 ## Security Considerations
 

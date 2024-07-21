@@ -66,7 +66,7 @@ cd smart-dorm-door
 3. Use the toggle switch to open or close the door
 4. The emergency close button can be used to quickly secure the door
 
-For more detailed usage instructions, check out our [User Guide](docs/USER_GUIDE.md).
+For more detailed usage instructions, check out my [User Guide](docs/USER_GUIDE.md).
 
 ## Configuration
 
@@ -87,7 +87,7 @@ The system exposes several RESTful API endpoints:
 - `POST /emergency-close`: Trigger an emergency close
 - `GET /status`: Retrieve the current door status
 
-For detailed API documentation, refer to our [API Guide](docs/API_GUIDE.md).
+For detailed API documentation, refer to my [API Guide](docs/API_GUIDE.md).
 
 ## Contributing
 

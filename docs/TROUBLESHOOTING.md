@@ -125,4 +125,4 @@
 - Use proper wire stripping and connection techniques
 - Be cautious when using breadboards and verify all connections
 
-If you encounter issues not covered here, or if the suggested solutions don't resolve your problem, please create an issue on our GitHub repository with detailed information about the problem and any error messages you're seeing.
+If you encounter issues not covered here, or if the suggested solutions don't resolve your problem, please create an issue on my GitHub repository with detailed information about the problem and any error messages you're seeing.
