@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .then((response) => response.json())
     .then((data) => {
       if (!data.authRequired) {
-        // If auth is not required, hide login and show control panel
+        // if auth isnt required, hide login and show control panel
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
       }

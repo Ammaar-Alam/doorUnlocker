@@ -5,11 +5,13 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 
+// load env vars
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// get env vars
 const thingId = process.env.THING_ID;
 const propertyId = process.env.PROPERTY_ID;
 const PASSWORD = process.env.PASSWORD;
@@ -18,12 +20,15 @@ const AUTH_REQUIRED = process.env.AUTH_REQUIRED === "true";
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
+// set up middleware
 app.use(express.static("public"));
 app.use(express.json());
 app.use(cookieParser());
 
+// trust first proxy
 app.set("trust proxy", 1);
 
+// session middleware config
 const sessionMiddleware = session({
   secret: SECRET_KEY,
   resave: false,
@@ -32,12 +37,13 @@ const sessionMiddleware = session({
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
   },
 });
 
 app.use(sessionMiddleware);
 
+// log session info for debugging
 app.use((req, res, next) => {
   console.log(`Session ID: ${req.sessionID}`);
   console.log(`Session: ${JSON.stringify(req.session)}`);
@@ -46,10 +52,12 @@ app.use((req, res, next) => {
 
 console.log("AUTH_REQUIRED:", AUTH_REQUIRED);
 
+// check if auth is required
 app.get("/auth-status", (req, res) => {
   res.json({ authRequired: AUTH_REQUIRED });
 });
 
+// login route
 app.post("/login", (req, res) => {
   const { password } = req.body;
   if (!AUTH_REQUIRED || password === PASSWORD) {
@@ -71,6 +79,7 @@ app.post("/login", (req, res) => {
   }
 });
 
+// auth middleware
 function checkAuth(req, res, next) {
   if (!AUTH_REQUIRED) {
     return next();
@@ -96,6 +105,7 @@ function checkAuth(req, res, next) {
   }
 }
 
+// get arduino iot cloud access token
 async function getAccessToken() {
   try {
     const response = await axios.post(
@@ -119,6 +129,7 @@ async function getAccessToken() {
   }
 }
 
+// send command to arduino iot cloud
 async function sendCommand(value) {
   const accessToken = await getAccessToken();
   const response = await fetch(
@@ -137,6 +148,7 @@ async function sendCommand(value) {
   }
 }
 
+// handle door commands
 app.post("/command", checkAuth, async (req, res) => {
   const { command } = req.body;
   try {
@@ -148,6 +160,11 @@ app.post("/command", checkAuth, async (req, res) => {
   }
 });
 
+// all the rest of the commands below are part of the API that allow me to create
+// an iphone shortcut/app and use the getURL contents to send commands to the
+// cloud; essentially this uses the curl command through terminal
+
+// emergency close route
 app.post("/emergency-close", checkAuth, async (req, res) => {
   try {
     await sendCommand(false);
@@ -158,6 +175,7 @@ app.post("/emergency-close", checkAuth, async (req, res) => {
   }
 });
 
+// open door route
 app.post("/open", checkAuth, async (req, res) => {
   try {
     await sendCommand(true);
@@ -168,6 +186,7 @@ app.post("/open", checkAuth, async (req, res) => {
   }
 });
 
+// close door route
 app.post("/close", checkAuth, async (req, res) => {
   try {
     await sendCommand(false);
@@ -178,6 +197,7 @@ app.post("/close", checkAuth, async (req, res) => {
   }
 });
 
+// get door status
 app.get("/status", checkAuth, async (req, res) => {
   try {
     const accessToken = await getAccessToken();
@@ -202,9 +222,11 @@ app.get("/status", checkAuth, async (req, res) => {
   }
 });
 
+// start server
 const server = app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
+// increase timeouts to handle slow connections
 server.keepAliveTimeout = 61000;
 server.headersTimeout = 62000;
