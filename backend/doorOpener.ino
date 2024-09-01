@@ -12,10 +12,6 @@ const int ENA = 9; // uses digital/pwn pins
 // motor run duration in milliseconds
 const unsigned long motorRunTime = 1750;
 
-// keepAlive interval in milliseconds
-const unsigned long keepAliveInterval = 300000; // 5 mins
-unsigned long lastKeepAliveUpdate = 0;
-
 void setup() {
   Serial.begin(9600);
   // delay necessary to avoid program getting hung while waiting for serial w/o PC connection
@@ -46,14 +42,7 @@ void setup() {
 
 void loop() {
   ArduinoCloud.update();
-
-  // send keepAlive update to prevent low-activity mode on cloud
-  if (millis() - lastKeepAliveUpdate  > keepAliveInterval) {
-    keepAlive = !keepAlive;
-    ArduinoCloud.update();
-    lastKeepAliveUpdate = millis();
   }
-}
 
 void onDoorOpenChange()  {
   Serial.print("Door state changed to: ");
@@ -62,7 +51,7 @@ void onDoorOpenChange()  {
   if (doorOpen) {
       digitalWrite(IN1, HIGH);
       digitalWrite(IN2, LOW);
-      analogWrite(ENA, 150); // ADJUSTABLE speed; current speed works best as it doesn't allow the motor to overtorque the string
+      analogWrite(ENA, 190); // ADJUSTABLE speed; current speed works best as it doesn't allow the motor to overtorque the string
       digitalWrite(RED_LED, HIGH); // turn on RED led
       digitalWrite(GREEN_LED, LOW);  // turn off GREEN led
       delay(motorRunTime); // run motor for specified duration
