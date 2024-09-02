@@ -1,3 +1,10 @@
+// redirect  to HTTPS if accessed over HTTP
+// not necessary, but google crawler/url inspect is slow to update cache
+if (window.location.protocol !== "https:") {
+  window.location.href =
+    "https://" + window.location.hostname + window.location.pathname + window.location.search;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   async function handleLogin(event) {
     event.preventDefault();
