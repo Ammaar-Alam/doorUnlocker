@@ -1,4 +1,4 @@
-// redirect  to HTTPS if accessed over HTTP
+// redirect to HTTPS if accessed over HTTP
 // not necessary, but google crawler/url inspect is slow to update cache
 if (window.location.protocol !== "https:") {
   window.location.href =
@@ -6,6 +6,8 @@ if (window.location.protocol !== "https:") {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  let authRequired = true; // assume auth is required by default
+
   async function handleLogin(event) {
     event.preventDefault();
     const password = document.getElementById("password").value;
@@ -34,33 +36,35 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.getElementById("login-form").addEventListener("submit", handleLogin);
 
-  // Check if authentication is required
+  // check if authentication is required
   fetch("/auth-status")
     .then((response) => response.json())
     .then((data) => {
-      if (!data.authRequired) {
-        // if auth isnt required, hide login and show control panel
+      authRequired = data.authRequired; // store the authRequired status
+      if (!authRequired) {
+        // if auth isn't required, hide login and show control panel
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
       }
     })
     .catch((error) => console.error("Error checking auth status:", error));
 
-  document.getElementById("login-form").addEventListener("submit", handleLogin);
-
   async function sendCommand(command) {
     try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        console.error("No auth token found. Please log in again.");
-        return;
+      if (authRequired) {
+        // if auth is required, check for token
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          console.error("No auth token found. please log in again.");
+          return;
+        }
       }
 
       const response = await fetch("/command", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token,
+          Authorization: authRequired ? localStorage.getItem("authToken") : "", // only add token if auth is required
         },
         body: JSON.stringify({ command }),
       });
@@ -86,8 +90,8 @@ document.addEventListener("DOMContentLoaded", function () {
       closedStatus.style.color = "rgba(76, 175, 80, 1)"; // solid green
       openStatus.style.color = "#888"; // default gray
     } else {
-      openStatus.style.color = "rgba(255, 94, 85, 1)"; // Solid Red
-      closedStatus.style.color = "#888"; // Default gray
+      openStatus.style.color = "rgba(255, 94, 85, 1)"; // solid red
+      closedStatus.style.color = "#888"; // default gray
     }
   }
 
@@ -100,17 +104,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
   async function emergencyClose() {
     try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        console.error("No auth token found. Please log in again.");
-        return;
+      if (authRequired) {
+        // if auth is required, check for token
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          console.error("No auth token found. please log in again.");
+          return;
+        }
       }
 
       const response = await fetch("/emergency-close", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: token,
+          Authorization: authRequired ? localStorage.getItem("authToken") : "", // only add token if auth is required
         },
       });
 
