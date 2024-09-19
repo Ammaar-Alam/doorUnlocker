@@ -6,6 +6,11 @@ An innovative IoT project that revolutionizes dorm room access using cutting-edg
 
 This website allows anyone, anywhere in the world, to open or close my dorm room door in real-time. Personally, I've made iPhone shortcuts that use the site's API endpoints so that I can open or close my door right from the lockscreen, or even ask siri to do the same; I barely even remember the dorm-pin on my prox at this point :P
 
+_[Watch it in action:](https://youtube.com/shorts/K_ev5bF7mhw?feature=share)_ <br>
+<a href="https://youtube.com/shorts/K_ev5bF7mhw?feature=share">
+  <img src="https://i.imgur.com/JOtGRpt.png" width="300"/>
+</a>
+
 ## Project Overview
 
 This advanced system integrates an Arduino Nano ESP32 Connect with a motor driver and DC motor to provide seamless, remote control of a dorm room door. By leveraging the Arduino IoT Cloud, it offers both WiFi and Bluetooth Low Energy (BLE) control options. For all intensive purposes, the BLE version is more than sufficient, but I chose to use the WiFi version as ~~the thought of some random dude in Russia stumbling across my site and opening my door was funny~~ I just thought it was cooler :)
