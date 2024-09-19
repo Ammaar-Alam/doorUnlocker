@@ -61,10 +61,10 @@ void onDoorOpenChange()  {
   } else {
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, HIGH);
-      analogWrite(ENA, 110); // ADJUSTABLE speed; found to work well w/o allowing motor to over-tangle in opposite way
+      analogWrite(ENA, 100); // ADJUSTABLE speed; found to work well w/o allowing motor to over-tangle in opposite way
       digitalWrite(RED_LED, LOW);  // turn off RED led
       digitalWrite(GREEN_LED, HIGH); // turn on GREEN led
-      delay(motorRunTime - 1250); // runtime less than OPEN door to prevent string from un-furling (don't have a spool attachment rn)
+      delay(motorRunTime - 1150); // runtime less than OPEN door to prevent string from un-furling (don't have a spool attachment rn)
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, LOW);
       analogWrite(ENA, 0); // stop the motor
