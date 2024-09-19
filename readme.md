@@ -6,6 +6,7 @@ An innovative IoT project that revolutionizes dorm room access using cutting-edg
 
 This website allows anyone, anywhere in the world, to open or close my dorm room door in real-time. Personally, I've made iPhone shortcuts that use the site's API endpoints so that I can open or close my door right from the lockscreen, or even ask siri to do the same; I barely even remember the dorm-pin on my prox at this point :P
 
+_[Watch it in action:](https://youtube.com/shorts/K_ev5bF7mhw?feature=share)_ <br>
 <a href="https://youtube.com/shorts/K_ev5bF7mhw?feature=share">
   <img src="https://i.imgur.com/JOtGRpt.png" width="300"/>
 </a>
