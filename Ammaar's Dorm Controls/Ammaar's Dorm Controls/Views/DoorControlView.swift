@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct DoorControlView: View {
     @ObservedObject var viewModel: DoorControlViewModel
@@ -20,7 +19,7 @@ struct DoorControlView: View {
                 .disabled(viewModel.isLoading)
         }
         .padding()
-        .background(Color(UIColor.systemBackground))
+        .background(Color(.systemBackground)) // Uses SwiftUI's systemBackground
         .cornerRadius(15)
         .shadow(radius: 5)
     }

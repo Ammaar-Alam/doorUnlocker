@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct StatusView: View {
     let isDoorOpen: Bool
@@ -15,7 +14,7 @@ struct StatusView: View {
                 .fontWeight(.semibold)
         }
         .padding()
-        .background(Color(UIColor.systemBackground))
+        .background(Color(.systemBackground)) // Uses SwiftUI's systemBackground
         .cornerRadius(15)
         .shadow(radius: 5)
     }
