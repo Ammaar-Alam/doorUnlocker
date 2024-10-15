@@ -48,8 +48,8 @@ This advanced system integrates an Arduino Nano ESP32 Connect with a motor drive
 
 1. Clone the repository:
 ```
-git clone https://github.com/yourusername/smart-dorm-door.git
-cd smart-dorm-door
+git clone https://github.com/ammaar-alam/doorUnlocker.git
+cd doorUnlocker
 ```
 
 2. Install dependencies: `npm install`
