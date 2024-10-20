@@ -54,7 +54,7 @@ void onDoorOpenChange()  {
       analogWrite(ENA, 190); // ADJUSTABLE speed; current speed works best as it doesn't allow the motor to overtorque the string
       digitalWrite(RED_LED, HIGH); // turn on RED led
       digitalWrite(GREEN_LED, LOW);  // turn off GREEN led
-      delay(motorRunTime + 150); // run motor for specified duration
+      delay(motorRunTime + 350); // run motor for specified duration
       digitalWrite(IN1, LOW);
       digitalWrite(IN2, LOW);
       analogWrite(ENA, 0); // stop the motor
