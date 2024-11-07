@@ -162,24 +162,41 @@ input:not(:checked) ~ #open {
 
 .social-links {
     list-style: none;
-    padding: 0;
+    padding: 20px 0;
+    margin: 0;
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    gap: 15px;
 }
 
 .social-links li {
-    margin: 0 10px;
+    margin: 0;
 }
 
 .social-links a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     text-decoration: none;
     color: #92dce5; /* Non Photo Blue */
-    font-size: 20px;
-    transition: color 0.2s;
+    font-size: 16px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(146, 220, 229, 0.2); /* Non Photo Blue with transparency */
+    transition: all 0.3s ease;
 }
 
 .social-links a:hover {
     color: #f8f7f9; /* Seasalt */
+    background: rgba(146, 220, 229, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.social-links i {
+    font-size: 18px;
 }
 
 footer {
@@ -235,6 +252,16 @@ footer p {
     .control-panel h2,
     .info h2 {
         font-size: 24px;
+    }
+
+    .social-links {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px;
+    }
+    
+    .social-links a {
+        justify-content: center;
     }
 }
 #emergencyCloseButton {
