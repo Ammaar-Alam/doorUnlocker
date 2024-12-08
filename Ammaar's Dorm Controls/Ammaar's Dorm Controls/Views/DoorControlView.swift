@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct DoorControlView: View {
     @ObservedObject var viewModel: DoorControlViewModel
@@ -12,8 +13,9 @@ struct DoorControlView: View {
             }
             .toggleStyle(SwitchToggleStyle(tint: .blue))
             .disabled(viewModel.isLoading)
-            .onChange(of: viewModel.isDoorOpen) { _ in
-                viewModel.toggleDoor()
+            .onChange(of: viewModel.isDoorOpen) { newValue in
+                // Call toggleDoor with the exact requested state rather than toggling inside the view model
+                viewModel.toggleDoor(open: newValue)
             }
             
             EmergencyButton(action: viewModel.emergencyClose)
