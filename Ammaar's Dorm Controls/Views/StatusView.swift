@@ -4,7 +4,7 @@ struct StatusView: View {
     let isDoorOpen: Bool
     
     var body: some View {
-        HStack {
+        HStack(spacing: 20) {
             Image(systemName: isDoorOpen ? "door.left.hand.open" : "door.left.hand.closed")
                 .font(.system(size: 50))
                 .foregroundColor(isDoorOpen ? .red : .green)
@@ -12,9 +12,10 @@ struct StatusView: View {
             Text(isDoorOpen ? "Door is Open" : "Door is Closed")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .foregroundColor(.primary)
         }
         .padding()
-        .background(Color(.systemBackground)) // Uses SwiftUI's systemBackground
+        .background(Color(.systemBackground))
         .cornerRadius(15)
         .shadow(radius: 5)
     }

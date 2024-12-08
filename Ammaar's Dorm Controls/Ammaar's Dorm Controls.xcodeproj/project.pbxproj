@@ -24,25 +24,86 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		67430C8F2C9CE2A8000F4E76 /* Ammaar's Dorm Controls.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ammaar's Dorm Controls.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		67430CA02C9CE2A9000F4E76 /* Ammaar's Dorm ControlsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ammaar's Dorm ControlsTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		67430CAA2C9CE2A9000F4E76 /* Ammaar's Dorm ControlsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ammaar's Dorm ControlsUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		67430CA02C9CE2A9000F4E76 /* Ammaar's Dorm ControlsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "Ammaar's Dorm ControlsTests.xctest"; path = "/Users/alam/Documents/GitHub/doorUnlocker/Ammaar's Dorm Controls/build/Debug/Ammaar's Dorm Controls.app/Contents/PlugIns/Ammaar's Dorm ControlsTests.xctest"; sourceTree = "<absolute>"; };
+		67430CAA2C9CE2A9000F4E76 /* Ammaar's Dorm ControlsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; name = "Ammaar's Dorm ControlsUITests.xctest"; path = "/Users/alam/Documents/GitHub/doorUnlocker/Ammaar's Dorm Controls/build/Debug/Ammaar's Dorm ControlsUITests-Runner.app/Contents/PlugIns/Ammaar's Dorm ControlsUITests.xctest"; sourceTree = "<absolute>"; };
+		67C51DCD2D053DE600BF5EF5 /* MyDormDoorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyDormDoorApp.swift; sourceTree = "<group>"; };
+		67C51DCE2D053DF900BF5EF5 /* Ammaar's Dorm Controls.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ammaar's Dorm Controls.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		67C51DD12D053DFA00BF5EF5 /* Exceptions for "Models" folder in "Ammaar's Dorm Controls" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppError.swift,
+				AuthStatus.swift,
+				Constants.swift,
+				DoorStatus.swift,
+				LoginResponse.swift,
+			);
+			target = 67430C8E2C9CE2A8000F4E76 /* Ammaar's Dorm Controls */;
+		};
+		67C51DDE2D053E3000BF5EF5 /* Exceptions for "ViewModels" folder in "Ammaar's Dorm Controls" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				DoorControlViewModel.swift,
+				LoginViewModel.swift,
+			);
+			target = 67430C8E2C9CE2A8000F4E76 /* Ammaar's Dorm Controls */;
+		};
+		67C51DE42D053E5500BF5EF5 /* Exceptions for "Views" folder in "Ammaar's Dorm Controls" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ContentView.swift,
+				DoorControlView.swift,
+				EmergencyButton.swift,
+				LoadingView.swift,
+				LoginView.swift,
+				StatusView.swift,
+			);
+			target = 67430C8E2C9CE2A8000F4E76 /* Ammaar's Dorm Controls */;
+		};
+		67C51DF12D053E9600BF5EF5 /* Exceptions for "Services" folder in "Ammaar's Dorm Controls" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				APIConfig.swift,
+				NetworkManager.swift,
+				SecureStorage.swift,
+			);
+			target = 67430C8E2C9CE2A8000F4E76 /* Ammaar's Dorm Controls */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		67430C912C9CE2A8000F4E76 /* Ammaar's Dorm Controls */ = {
+		67C51DC62D053D9200BF5EF5 /* Models */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Ammaar's Dorm Controls";
+			exceptions = (
+				67C51DD12D053DFA00BF5EF5 /* Exceptions for "Models" folder in "Ammaar's Dorm Controls" target */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
-		67430CA32C9CE2A9000F4E76 /* Ammaar's Dorm ControlsTests */ = {
+		67C51DC82D053DAB00BF5EF5 /* ViewModels */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Ammaar's Dorm ControlsTests";
+			exceptions = (
+				67C51DDE2D053E3000BF5EF5 /* Exceptions for "ViewModels" folder in "Ammaar's Dorm Controls" target */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		67430CAD2C9CE2A9000F4E76 /* Ammaar's Dorm ControlsUITests */ = {
+		67C51DCA2D053DBD00BF5EF5 /* Views */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Ammaar's Dorm ControlsUITests";
+			exceptions = (
+				67C51DE42D053E5500BF5EF5 /* Exceptions for "Views" folder in "Ammaar's Dorm Controls" target */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		67C51DCB2D053DC200BF5EF5 /* Services */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				67C51DF12D053E9600BF5EF5 /* Exceptions for "Services" folder in "Ammaar's Dorm Controls" target */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,21 +136,13 @@
 		67430C862C9CE2A7000F4E76 = {
 			isa = PBXGroup;
 			children = (
-				67430C912C9CE2A8000F4E76 /* Ammaar's Dorm Controls */,
-				67430CA32C9CE2A9000F4E76 /* Ammaar's Dorm ControlsTests */,
-				67430CAD2C9CE2A9000F4E76 /* Ammaar's Dorm ControlsUITests */,
-				67430C902C9CE2A8000F4E76 /* Products */,
+				67C51DCD2D053DE600BF5EF5 /* MyDormDoorApp.swift */,
+				67C51DCB2D053DC200BF5EF5 /* Services */,
+				67C51DC82D053DAB00BF5EF5 /* ViewModels */,
+				67C51DC62D053D9200BF5EF5 /* Models */,
+				67C51DCA2D053DBD00BF5EF5 /* Views */,
+				67C51DCE2D053DF900BF5EF5 /* Ammaar's Dorm Controls.app */,
 			);
-			sourceTree = "<group>";
-		};
-		67430C902C9CE2A8000F4E76 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				67430C8F2C9CE2A8000F4E76 /* Ammaar's Dorm Controls.app */,
-				67430CA02C9CE2A9000F4E76 /* Ammaar's Dorm ControlsTests.xctest */,
-				67430CAA2C9CE2A9000F4E76 /* Ammaar's Dorm ControlsUITests.xctest */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -107,14 +160,11 @@
 			);
 			dependencies = (
 			);
-			fileSystemSynchronizedGroups = (
-				67430C912C9CE2A8000F4E76 /* Ammaar's Dorm Controls */,
-			);
 			name = "Ammaar's Dorm Controls";
 			packageProductDependencies = (
 			);
 			productName = "Ammaar's Dorm Controls";
-			productReference = 67430C8F2C9CE2A8000F4E76 /* Ammaar's Dorm Controls.app */;
+			productReference = 67C51DCE2D053DF900BF5EF5 /* Ammaar's Dorm Controls.app */;
 			productType = "com.apple.product-type.application";
 		};
 		67430C9F2C9CE2A9000F4E76 /* Ammaar's Dorm ControlsTests */ = {
@@ -129,9 +179,6 @@
 			);
 			dependencies = (
 				67430CA22C9CE2A9000F4E76 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				67430CA32C9CE2A9000F4E76 /* Ammaar's Dorm ControlsTests */,
 			);
 			name = "Ammaar's Dorm ControlsTests";
 			packageProductDependencies = (
@@ -153,9 +200,6 @@
 			dependencies = (
 				67430CAC2C9CE2A9000F4E76 /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				67430CAD2C9CE2A9000F4E76 /* Ammaar's Dorm ControlsUITests */,
-			);
 			name = "Ammaar's Dorm ControlsUITests";
 			packageProductDependencies = (
 			);
@@ -175,6 +219,7 @@
 				TargetAttributes = {
 					67430C8E2C9CE2A8000F4E76 = {
 						CreatedOnToolsVersion = 16.1;
+						LastSwiftMigration = 1610;
 					};
 					67430C9F2C9CE2A9000F4E76 = {
 						CreatedOnToolsVersion = 16.1;
@@ -196,7 +241,7 @@
 			mainGroup = 67430C862C9CE2A7000F4E76;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 67430C902C9CE2A8000F4E76 /* Products */;
+			productRefGroup = 67430C862C9CE2A7000F4E76;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -388,10 +433,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Ammaar's Dorm Controls/Ammaar_s_Dorm_Controls.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"Ammaar's Dorm Controls/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -414,6 +459,7 @@
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				XROS_DEPLOYMENT_TARGET = 2.1;
@@ -425,10 +471,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Ammaar's Dorm Controls/Ammaar_s_Dorm_Controls.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"Ammaar's Dorm Controls/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

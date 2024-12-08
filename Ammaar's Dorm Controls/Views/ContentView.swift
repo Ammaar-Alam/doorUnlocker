@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var viewModel = DoorControlViewModel()
-
+    @EnvironmentObject var viewModel: DoorControlViewModel
+    @EnvironmentObject var loginViewModel: LoginViewModel
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 30) {
@@ -12,12 +13,25 @@ struct ContentView: View {
                 
                 if viewModel.isLoading {
                     ProgressView("Processing...")
+                        .padding()
                 }
                 
                 Spacer()
+                
+                if loginViewModel.authRequired {
+                    Button("Logout") {
+                        loginViewModel.logout()
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(10)
+                    .padding(.bottom, 20)
+                }
             }
             .padding()
-            .navigationTitle("Ammaar's Dorm Door")
+            .navigationTitle("My Dorm Door")
             .onAppear {
                 viewModel.fetchStatus()
             }
@@ -25,11 +39,5 @@ struct ContentView: View {
                 Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
             }
         }
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
     }
 }

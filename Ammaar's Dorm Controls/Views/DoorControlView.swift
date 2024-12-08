@@ -8,6 +8,7 @@ struct DoorControlView: View {
             Toggle(isOn: $viewModel.isDoorOpen) {
                 Text(viewModel.isDoorOpen ? "Close Door" : "Open Door")
                     .font(.headline)
+                    .foregroundColor(.primary)
             }
             .toggleStyle(SwitchToggleStyle(tint: .blue))
             .disabled(viewModel.isLoading)
@@ -19,7 +20,7 @@ struct DoorControlView: View {
                 .disabled(viewModel.isLoading)
         }
         .padding()
-        .background(Color(.systemBackground)) // Uses SwiftUI's systemBackground
+        .background(Color(.systemBackground))
         .cornerRadius(15)
         .shadow(radius: 5)
     }
