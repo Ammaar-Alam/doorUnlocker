@@ -5,7 +5,7 @@ struct EmergencyButton: View {
     
     var body: some View {
         Button(action: action) {
-            Text("Emergency Close / Untangle")
+            Text("Force Close / Untangle")
                 .font(.headline)
                 .foregroundColor(AppTheme.background)
                 .padding()
