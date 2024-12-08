@@ -6,26 +6,24 @@ struct NetworkBackgroundView: View {
     @State private var timerCancellable: Any?
     
     let updateInterval = 1.0/30.0 // ~30 FPS
+    let nodeCount = 15
+    let nodeMaxDistance: CGFloat = 170 // slightly larger for more connections
+    let nodeRadius: CGFloat = 6
     
     var body: some View {
         Canvas { context, size in
-            // Fill background with black
             context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(AppTheme.background))
             
-            // Draw lines and nodes
             drawConnections(nodes: nodes, in: &context, size: size)
             drawNodes(nodes: nodes, in: &context)
         }
         .onAppear {
-            // Initialize nodes once
             if nodes.isEmpty {
-                // Create nodes
-                nodes = (0..<15).map { _ in
+                nodes = (0..<nodeCount).map { _ in
                     Node(position: CGPoint(x: CGFloat.random(in: 0...300),
                                            y: CGFloat.random(in: 0...600)))
                 }
             }
-            // Start a timer to update nodes
             let timer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { _ in
                 updateNodes()
             }
@@ -44,13 +42,14 @@ struct NetworkBackgroundView: View {
         let dt = currentTime.timeIntervalSince(lastUpdateTime)
         lastUpdateTime = currentTime
         
-        // We must do computations on main thread
         DispatchQueue.main.async {
-            if let firstSize = UIApplication.shared.windows.first?.bounds.size {
-                // Using screen size as approximate area
-                for i in 0..<nodes.count {
-                    nodes[i].update(size: firstSize, dt: dt, speed: 0.0005)
-                }
+            // Approx screen size:
+            let screenSize = UIApplication.shared.windows.first?.bounds.size ?? CGSize(width: 300, height: 600)
+            for i in 0..<nodes.count {
+                // Using a slightly faster 'speed' to result in slower movement (because dt/speed gets smaller)
+                // Actually to slow down movement, we can increase 'speed' so dt/speed is smaller
+                // Also reduced initial velocities in Node to -0.1...0.1
+                nodes[i].update(size: screenSize, dt: dt, speed: 0.002)
             }
         }
     }
@@ -58,19 +57,25 @@ struct NetworkBackgroundView: View {
     func drawNodes(nodes: [Node], in context: inout GraphicsContext) {
         for node in nodes {
             var shape = Path()
-            shape.addArc(center: node.position, radius: 4, startAngle: .zero, endAngle: .degrees(360), clockwise: false)
-            context.fill(shape, with: .color(AppTheme.primary.opacity(0.7)))
+            shape.addArc(center: node.position, radius: nodeRadius, startAngle: .zero, endAngle: .degrees(360), clockwise: false)
             
-            // Glow effect around node
+            // Fill node
+            context.fill(shape, with: .color(AppTheme.primary.opacity(0.9)))
+            
+            // Strong glow: multiple layered blurs
             context.drawLayer { innerContext in
-                innerContext.addFilter(.blur(radius: 8))
-                innerContext.fill(shape, with: .color(AppTheme.primary.opacity(0.3)))
+                innerContext.addFilter(.blur(radius: 15))
+                innerContext.fill(shape, with: .color(AppTheme.primary.opacity(0.5)))
+            }
+            
+            context.drawLayer { innerContext in
+                innerContext.addFilter(.blur(radius: 30))
+                innerContext.fill(shape, with: .color(AppTheme.primary.opacity(0.2)))
             }
         }
     }
     
     func drawConnections(nodes: [Node], in context: inout GraphicsContext, size: CGSize) {
-        let nodeMaxDistance: CGFloat = 150
         for i in 0..<nodes.count {
             for j in (i+1)..<nodes.count {
                 let dx = nodes[i].position.x - nodes[j].position.x
@@ -82,11 +87,13 @@ struct NetworkBackgroundView: View {
                     line.move(to: nodes[i].position)
                     line.addLine(to: nodes[j].position)
                     
-                    context.stroke(line, with: .color(AppTheme.primary.opacity(0.2 * alpha)), style: StrokeStyle(lineWidth: 1))
+                    // Base line
+                    context.stroke(line, with: .color(AppTheme.primary.opacity(0.3 * alpha)), style: StrokeStyle(lineWidth: 2))
                     
+                    // Glow effect line
                     context.drawLayer { innerContext in
-                        innerContext.addFilter(.blur(radius: 4))
-                        innerContext.stroke(line, with: .color(AppTheme.primary.opacity(0.05 * alpha)), style: StrokeStyle(lineWidth: 2))
+                        innerContext.addFilter(.blur(radius: 10))
+                        innerContext.stroke(line, with: .color(AppTheme.primary.opacity(0.15 * alpha)), style: StrokeStyle(lineWidth: 3))
                     }
                 }
             }
@@ -96,8 +103,9 @@ struct NetworkBackgroundView: View {
 
 struct Node {
     var position: CGPoint
-    var vx: CGFloat = CGFloat.random(in: -0.5...0.5)
-    var vy: CGFloat = CGFloat.random(in: -0.5...0.5)
+    // Slower speeds: from -0.1...0.1 instead of -0.5
+    var vx: CGFloat = CGFloat.random(in: -0.1...0.1)
+    var vy: CGFloat = CGFloat.random(in: -0.1...0.1)
     
     mutating func update(size: CGSize, dt: Double, speed: Double) {
         position.x += vx * CGFloat(dt / speed)
@@ -108,9 +116,9 @@ struct Node {
         if position.y < -50 { position.y = size.height + 50 }
         if position.y > size.height + 50 { position.y = -50 }
         
-        vx += CGFloat.random(in: -0.01...0.01)
-        vy += CGFloat.random(in: -0.01...0.01)
-        let maxSpeed: CGFloat = 0.1
+        vx += CGFloat.random(in: -0.003...0.003)
+        vy += CGFloat.random(in: -0.003...0.003)
+        let maxSpeed: CGFloat = 0.3
         let speedMag = sqrt(vx*vx + vy*vy)
         if speedMag > maxSpeed {
             vx = (vx / speedMag) * maxSpeed
