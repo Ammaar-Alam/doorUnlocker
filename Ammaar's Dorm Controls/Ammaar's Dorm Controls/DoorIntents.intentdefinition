@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>INEnums</key>
+    <array/>
+    <key>INIntentDefinitionModelVersion</key>
+    <string>1.2</string>
+    <key>INIntentDefinitionNamespace</key>
+    <string>DoorNS</string>
+    <key>INIntentDefinitionSystemVersion</key>
+    <string>24C5079e</string>
+    <key>INIntentDefinitionToolsBuildVersion</key>
+    <string>16B5014f</string>
+    <key>INIntentDefinitionToolsVersion</key>
+    <string>16.1</string>
+    <key>INIntents</key>
+    <array>
+        <dict>
+            <key>INIntentCategory</key>
+            <string>generic</string>
+            <key>INIntentConfigurable</key>
+            <true/>
+            <key>INIntentDescription</key>
+            <string>Opens the dorm door</string>
+            <key>INIntentDescriptionID</key>
+            <string>descIDOpenDoor</string>
+            <key>INIntentEligibleForWidgets</key>
+            <true/>
+            <key>INIntentName</key>
+            <string>OpenDoorIntent</string>
+            <key>INIntentResponse</key>
+            <dict>
+                <key>INIntentResponseCodes</key>
+                <array>
+                    <dict>
+                        <key>INIntentResponseCodeName</key>
+                        <string>success</string>
+                        <key>INIntentResponseCodeSuccess</key>
+                        <true/>
+                    </dict>
+                    <dict>
+                        <key>INIntentResponseCodeName</key>
+                        <string>failure</string>
+                    </dict>
+                </array>
+            </dict>
+            <key>INIntentTitle</key>
+            <string>OpenDoorIntent</string>
+            <key>INIntentType</key>
+            <string>Custom</string>
+            <key>INIntentVerb</key>
+            <string>Do</string>
+        </dict>
+    </array>
+    <key>INTypes</key>
+    <array/>
+</dict>
+</plist>
