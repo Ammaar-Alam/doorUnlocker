@@ -5,6 +5,8 @@ struct ContentView: View {
     @EnvironmentObject var loginViewModel: LoginViewModel
 
     @State private var animateShimmer = false
+    @State private var showingLaunchMessage: Bool = false
+    @State private var launchMessage: String = ""
 
     var body: some View {
         ZStack {
@@ -35,14 +37,106 @@ struct ContentView: View {
         }
         .onAppear {
             loginViewModel.checkAuthStatus()
-            // Start shimmer animation
             animateShimmer = true
+
+            // Handle any requested shortcut action now that the app UI is ready.
+            if let action = SceneDelegate.requestedShortcutAction {
+                SceneDelegate.requestedShortcutAction = nil
+                performShortcutAction(action)
+            }
+        }
+        .alert(isPresented: $showingLaunchMessage) {
+            Alert(title: Text("Shortcut Action"), message: Text(launchMessage), dismissButton: .default(Text("OK")))
         }
         .alert(item: $viewModel.errorMessage) { error in
             Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
         }
         .alert(item: $loginViewModel.errorMessage) { error in
             Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+        }
+    }
+
+    private func performShortcutAction(_ action: ShortcutActionType) {
+        // Make sure user is authenticated if required
+        // If authentication is required and not done, show message that you must log in
+        if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
+            launchMessage = "Please log in to perform this action."
+            showingLaunchMessage = true
+            return
+        }
+
+        switch action {
+        case .open3sec:
+            // Open immediately
+            NetworkManager.shared.sendCommand(command: "open") { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success():
+                        // Wait 3 seconds then close
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            NetworkManager.shared.sendCommand(command: "close") { res2 in
+                                DispatchQueue.main.async {
+                                    switch res2 {
+                                    case .success():
+                                        self.launchMessage = "Door opened, waited 3s, then closed."
+                                    case .failure(let err):
+                                        self.launchMessage = "Opened door, but failed to close after 3s: \(err.localizedDescription)"
+                                    }
+                                    self.showingLaunchMessage = true
+                                    self.viewModel.fetchStatus()
+                                }
+                            }
+                        }
+
+                    case .failure(let error):
+                        self.launchMessage = "Failed to open door (3s): \(error.localizedDescription)"
+                        self.showingLaunchMessage = true
+                        self.viewModel.fetchStatus()
+                    }
+                }
+            }
+
+        case .open:
+            NetworkManager.shared.sendCommand(command: "open") { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success():
+                        self.launchMessage = "Door opened via shortcut."
+                    case .failure(let error):
+                        self.launchMessage = "Failed to open door: \(error.localizedDescription)"
+                    }
+                    self.showingLaunchMessage = true
+                    self.viewModel.fetchStatus()
+                }
+            }
+
+        case .close:
+            NetworkManager.shared.sendCommand(command: "close") { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success():
+                        self.launchMessage = "Door closed via shortcut."
+                    case .failure(let error):
+                        self.launchMessage = "Failed to close door: \(error.localizedDescription)"
+                    }
+                    self.showingLaunchMessage = true
+                    self.viewModel.fetchStatus()
+                }
+            }
+
+        case .status:
+            NetworkManager.shared.fetchDoorStatus { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let status):
+                        self.launchMessage = "Door is \(status.doorOpen ? "Open" : "Closed")"
+                    case .failure(let error):
+                        self.launchMessage = "Error getting status: \(error.localizedDescription)"
+                    }
+                    self.showingLaunchMessage = true
+                    self.viewModel.fetchStatus()
+                }
+            }
         }
     }
 
@@ -135,19 +229,10 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 20) {
             shimmerTitle("About This Project")
 
-            Text("""
-This is a personal project I worked on over the summer. The toggle above really does open or close my door. It sends a command to my proxy server which routes that command to the Arduino IoT Cloud, relaying the command to the Arduino. That Arduino is connected to a motor driver which then spins a DC motor, reeling a fishing line knotted around my door handle, pulling it down.
-""")
-            .foregroundColor(AppTheme.text)
-            .font(.body)
-            .fixedSize(horizontal: false, vertical: true)
-
-            Text("""
-For now, I don’t plan to add more automation. It was inspired by a joke from my girlfriend and partly by my problem of locking myself out frequently. Fun learning experience with Arduinos and circuitry.
-""")
-            .foregroundColor(AppTheme.text)
-            .font(.body)
-            .fixedSize(horizontal: false, vertical: true)
+            Text("This is a personal project ...")
+                .foregroundColor(AppTheme.text)
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text("All parts are open source on GitHub, so feel free to build your own!")
                 .font(.footnote)

@@ -1,6 +1,46 @@
 import AppIntents
 import Foundation
 
+enum DoorAction: String, CaseIterable, AppEnum {
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Door Action")
+
+    case open = "open"
+    case close = "close"
+    case emergencyClose = "emergency-close"
+
+    static var caseDisplayRepresentations: [DoorAction: DisplayRepresentation] = [
+        .open: DisplayRepresentation(
+            title: "Open Door",
+            subtitle: "Opens the dorm door",
+            image: .init(systemName: "arrow.up.circle")
+        ),
+        .close: DisplayRepresentation(
+            title: "Close Door",
+            subtitle: "Closes the dorm door",
+            image: .init(systemName: "lock")
+        ),
+        .emergencyClose: DisplayRepresentation(
+            title: "Emergency Close",
+            subtitle: "Force closes/untangles the door",
+            image: .init(systemName: "exclamationmark.triangle")
+        )
+    ]
+}
+
+@available(iOS 16.0, *)
+struct DoorActionIntent: AppIntent {
+    static var title: LocalizedStringResource = "Perform Door Action"
+    static var description = IntentDescription("Choose an action to perform on the door (open, close, or emergency close).")
+
+    @Parameter(title: "Action", default: .open)
+    var action: DoorAction
+
+    func perform() async throws -> some IntentResult {
+        try await performDoorCommand(action.rawValue)
+        return .result(dialog: "Performed \(action) action on the door.")
+    }
+}
+
 @available(iOS 16.0, *)
 struct OpenDoorIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Door"
@@ -8,19 +48,20 @@ struct OpenDoorIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         try await performDoorCommand("open")
-        return .result()
+        return .result(dialog: "Door opened successfully!")
     }
 }
 
 @available(iOS 16.0, *)
 struct OpenDoorIn3SecIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Door (3 Seconds)"
-    static var description = IntentDescription("Waits 3 seconds, then opens the door.")
+    static var description = IntentDescription("Opens the door immediately, waits 3 seconds, then closes it.")
 
     func perform() async throws -> some IntentResult {
-        try await Task.sleep(nanoseconds: 3_000_000_000)
         try await performDoorCommand("open")
-        return .result()
+        try await Task.sleep(nanoseconds: 3_000_000_000)
+        try await performDoorCommand("close")
+        return .result(dialog: "Opened, waited 3 seconds, and closed the door.")
     }
 }
 
@@ -31,7 +72,7 @@ struct CloseDoorIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         try await performDoorCommand("close")
-        return .result()
+        return .result(dialog: "Door closed successfully!")
     }
 }
 
@@ -81,27 +122,33 @@ struct DoorShortcutsProvider: AppShortcutsProvider {
         return [
             AppShortcut(
                 intent: OpenDoorIn3SecIntent(),
-                phrases: [AppShortcutPhrase("Open door in three seconds")],
+                phrases: [.init("Open door in three seconds")],
                 shortTitle: "Open in 3s",
                 systemImageName: "timer"
             ),
             AppShortcut(
                 intent: OpenDoorIntent(),
-                phrases: [AppShortcutPhrase("Open door now")],
+                phrases: [.init("Open door now")],
                 shortTitle: "Open Now",
                 systemImageName: "arrow.up.circle"
             ),
             AppShortcut(
                 intent: CloseDoorIntent(),
-                phrases: [AppShortcutPhrase("Close the door")],
+                phrases: [.init("Close the door")],
                 shortTitle: "Close Door",
                 systemImageName: "lock"
             ),
             AppShortcut(
                 intent: GetDoorStatusIntent(),
-                phrases: [AppShortcutPhrase("Check the door status")],
+                phrases: [.init("Check the door status")],
                 shortTitle: "Door Status",
                 systemImageName: "magnifyingglass"
+            ),
+            AppShortcut(
+                intent: DoorActionIntent(),
+                phrases: [.init("Perform a door action")],
+                shortTitle: "Perform Door Action",
+                systemImageName: "gear"
             )
         ]
     }
