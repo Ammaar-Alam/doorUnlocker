@@ -8,6 +8,21 @@ class DoorControlViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
+    func fetchStatus() {
+        isLoading = true
+        NetworkManager.shared.fetchDoorStatus { [weak self] result in
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                switch result {
+                case .success(let status):
+                    self?.isDoorOpen = status.doorOpen
+                case .failure(let error):
+                    self?.errorMessage = AppError(message: error.localizedDescription)
+                }
+            }
+        }
+    }
+    
     func toggleDoor(open: Bool) {
         isLoading = true
         let command = open ? "open" : "close"
@@ -17,21 +32,6 @@ class DoorControlViewModel: ObservableObject {
                 switch result {
                 case .success():
                     self?.isDoorOpen = open
-                case .failure(let error):
-                    self?.errorMessage = AppError(message: error.localizedDescription)
-                }
-            }
-        }
-    }
-    
-    func fetchStatus() {
-        isLoading = true
-        NetworkManager.shared.fetchDoorStatus { [weak self] result in
-            DispatchQueue.main.async {
-                self?.isLoading = false
-                switch result {
-                case .success(let status):
-                    self?.isDoorOpen = status.doorOpen
                 case .failure(let error):
                     self?.errorMessage = AppError(message: error.localizedDescription)
                 }

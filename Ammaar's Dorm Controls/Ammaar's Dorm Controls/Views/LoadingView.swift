@@ -6,9 +6,10 @@ struct LoadingView: View {
     var body: some View {
         VStack(spacing: 20) {
             ProgressView()
+                .tint(AppTheme.primary)
             Text(message)
                 .font(.headline)
-                .foregroundColor(.primary)
+                .foregroundColor(AppTheme.text)
         }
         .padding()
     }

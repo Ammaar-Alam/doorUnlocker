@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct StatusView: View {
     let isDoorOpen: Bool
@@ -13,11 +12,12 @@ struct StatusView: View {
             Text(isDoorOpen ? "Door is Open" : "Door is Closed")
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(.primary)
+                .foregroundColor(AppTheme.text)
         }
         .padding()
-        .background(Color(UIColor.systemBackground))
+        .background(AppTheme.cardBg)
         .cornerRadius(15)
-        .shadow(radius: 5)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 8)
     }
 }

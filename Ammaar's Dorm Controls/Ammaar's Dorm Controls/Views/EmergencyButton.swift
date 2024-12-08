@@ -7,11 +7,12 @@ struct EmergencyButton: View {
         Button(action: action) {
             Text("Emergency Close / Untangle")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.background)
                 .padding()
                 .frame(maxWidth: .infinity)
-                .background(Color.red)
+                .background(AppTheme.primary)
                 .cornerRadius(10)
+                .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
         }
     }
 }

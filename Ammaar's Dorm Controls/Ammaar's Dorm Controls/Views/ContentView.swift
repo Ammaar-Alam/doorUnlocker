@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct ContentView: View {
     @EnvironmentObject var viewModel: DoorControlViewModel
@@ -7,44 +6,32 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.15), Color.purple.opacity(0.15)]),
-                           startPoint: .top, endPoint: .bottom)
-            .ignoresSafeArea()
+            // Background
+            AppTheme.background.ignoresSafeArea()
             
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(spacing: 30) {
-                    
-                    // Top Section: Either login form if not authenticated (and auth required), or door controls
                     if loginViewModel.isCheckingAuthStatus {
                         LoadingView(message: "Checking Authorization...")
                             .padding(.top, 50)
                     } else {
                         if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
-                            // Show login at top
                             loginFormSection
                         } else {
-                            // Show door controls if authenticated
                             doorControlSection
                         }
                     }
                     
-                    // About and Info Section - always visible
                     aboutSection
-                        .padding(.horizontal)
-                    
-                    // Social / Connect With Me Section
                     connectSection
-                        .padding(.horizontal)
-                    
                     Spacer(minLength: 50)
                 }
                 .padding(.top, 50)
+                .padding(.horizontal)
             }
         }
         .onAppear {
             loginViewModel.checkAuthStatus()
-            // If already authenticated, we can fetch door status once login check is done
         }
         .alert(item: $viewModel.errorMessage) { error in
             Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
@@ -54,75 +41,82 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - Login Form Section
     private var loginFormSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Please Log In")
-                .font(.system(.largeTitle, weight: .semibold))
-                .foregroundColor(.primary)
+                .font(.largeTitle)
+                .fontWeight(.semibold)
+                .gradientText()
                 .padding(.bottom, 10)
             
-            TextField("Enter Password", text: $loginViewModel.password, onCommit: {
-                loginViewModel.login()
-            })
-            .textFieldStyle(RoundedBorderTextFieldStyle())
+            SecureField("Enter Password", text: $loginViewModel.password)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .foregroundColor(AppTheme.text)
+                .padding(.horizontal)
+                .accentColor(AppTheme.primary)
             
             if loginViewModel.isLoading {
                 ProgressView("Logging In...")
+                    .tint(AppTheme.primary)
             } else {
                 Button(action: {
                     loginViewModel.login()
                 }) {
                     Text("Login")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.background)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.blue)
+                        .background(AppTheme.highlightGradient)
                         .cornerRadius(10)
                 }
+                .padding(.horizontal)
+                .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
             }
             
             Text("Login to control the door. If you don't have the password, you can still view the project info below.")
                 .font(.footnote)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.textSecondary)
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground).opacity(0.9))
+        .background(AppTheme.cardBg)
         .cornerRadius(15)
-        .shadow(radius: 5)
-        .padding(.horizontal)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 8)
     }
     
+    // MARK: - Door Control Section
     private var doorControlSection: some View {
         VStack(spacing: 20) {
-            // Door Status View
             StatusView(isDoorOpen: viewModel.isDoorOpen)
             
-            // Door Control View
             DoorControlView(viewModel: viewModel)
             
             if viewModel.isLoading {
                 ProgressView("Processing...")
+                    .tint(AppTheme.primary)
                     .padding()
             }
             
-            // Logout button (only if auth is required and user is logged in)
             if loginViewModel.authRequired && loginViewModel.isAuthenticated {
                 Button("Logout") {
                     loginViewModel.logout()
                 }
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.background)
                 .padding()
-                .background(Color.blue)
+                .background(AppTheme.highlightGradient)
                 .cornerRadius(10)
+                .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
+                .padding(.bottom, 20)
             }
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground).opacity(0.9))
+        .background(AppTheme.cardBg)
         .cornerRadius(15)
-        .shadow(radius: 5)
-        .padding(.horizontal)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 8)
         .onAppear {
             if loginViewModel.isAuthenticated {
                 viewModel.fetchStatus()
@@ -130,78 +124,78 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - About Section
     private var aboutSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("About This Project")
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(.primary)
+                .gradientText()
             
             Text("""
-            This is a personal project I worked on over the summer. The toggle above really does open or close my door. It sends a command to my proxy server which routes that command to the Arduino IoT Cloud server, relaying the command to the Arduino. That Arduino is connected to a motor driver which then spins a DC motor, reeling a fishing line knotted around my door handle, pulling it down.
-            """)
+This is a personal project I worked on over the summer. The toggle above really does open or close my door. It sends a command to my proxy server which routes that command to the Arduino IoT Cloud, relaying the command to the Arduino. That Arduino is connected to a motor driver which then spins a DC motor, reeling a fishing line knotted around my door handle, pulling it down.
+""")
+            .foregroundColor(AppTheme.text)
             .font(.body)
-            .foregroundColor(.primary)
             .fixedSize(horizontal: false, vertical: true)
             
             Text("""
-            For now, I don’t plan to add more automation. This project was mainly inspired by my girlfriend, who joked about wanting her own prox for my room, and (just partly) by my real problem of locking myself out somewhat frequently. It was fun to learn to work with Arduinos and circuitry, so maybe I’ll expand it in the future.
-            """)
+For now, I don’t plan to add more automation. This project was mainly inspired by my girlfriend, who joked about wanting her own prox for my room, and partly by my real problem of locking myself out somewhat frequently. It was fun to learn to work with Arduinos and circuitry, so maybe I’ll expand in the future.
+""")
+            .foregroundColor(AppTheme.text)
             .font(.body)
-            .foregroundColor(.primary)
             .fixedSize(horizontal: false, vertical: true)
             
             Text("""
-            All the parts I used, including those bought and printed, are all open source on the GitHub Repo, including the code, so feel free to make one yourself :)
-            """)
+All the parts I used, including those bought and printed, are open source on the GitHub Repo, so feel free to make one yourself :)
+""")
             .font(.footnote)
-            .foregroundColor(.secondary)
+            .foregroundColor(AppTheme.textSecondary)
             
-            Divider()
+            Divider().background(AppTheme.border)
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground).opacity(0.9))
+        .background(AppTheme.cardBg)
         .cornerRadius(15)
-        .shadow(radius: 5)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 8)
     }
     
+    // MARK: - Connect Section
     private var connectSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Connect with Me")
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(.primary)
+                .gradientText()
             
             VStack(alignment: .leading, spacing: 10) {
-                Link(destination: URL(string: "https://ammaaralam.com")!) {
-                    labelWithIcon(icon: "camera.fill", text: "Coding Portfolio / Personal Site")
-                }
-                Link(destination: URL(string: "https://github.com/Ammaar-Alam/doorUnlocker")!) {
-                    labelWithIcon(icon: "chevron.left.forwardslash.chevron.right", text: "GitHub")
-                }
-                Link(destination: URL(string: "https://www.linkedin.com/in/Ammaar-Alam")!) {
-                    labelWithIcon(icon: "link", text: "LinkedIn")
-                }
-                Link(destination: URL(string: "https://ammaar.xyz")!) {
-                    labelWithIcon(icon: "camera.on.rectangle", text: "Photography Portfolio")
-                }
+                linkButton(icon: "camera.fill", text: "Coding Portfolio / Personal Site", url: "https://ammaaralam.com")
+                linkButton(icon: "chevron.left.forwardslash.chevron.right", text: "GitHub", url: "https://github.com/Ammaar-Alam/doorUnlocker")
+                linkButton(icon: "link", text: "LinkedIn", url: "https://www.linkedin.com/in/Ammaar-Alam")
+                linkButton(icon: "camera.on.rectangle", text: "Photography Portfolio", url: "https://ammaar.xyz")
             }
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground).opacity(0.9))
+        .background(AppTheme.cardBg)
         .cornerRadius(15)
-        .shadow(radius: 5)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 8)
     }
     
-    private func labelWithIcon(icon: String, text: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-            Text(text)
+    private func linkButton(icon: String, text: String, url: String) -> some View {
+        Link(destination: URL(string: url)!) {
+            HStack(spacing: 8) {
+                Image(systemName: icon).foregroundColor(AppTheme.primary)
+                Text(text)
+                    .font(.headline)
+                    .foregroundColor(AppTheme.primary)
+            }
+            .padding(8)
+            .background(AppTheme.cardBg)
+            .cornerRadius(8)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.border, lineWidth: 1))
+            .shadow(color: AppTheme.primary.opacity(0.3), radius: 5)
         }
-        .font(.headline)
-        .foregroundColor(.blue)
-        .padding(8)
-        .background(Color(UIColor.tertiarySystemBackground))
-        .cornerRadius(8)
     }
 }

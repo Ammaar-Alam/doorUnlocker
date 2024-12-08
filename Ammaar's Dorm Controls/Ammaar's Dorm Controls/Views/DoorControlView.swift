@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct DoorControlView: View {
     @ObservedObject var viewModel: DoorControlViewModel
@@ -9,12 +8,11 @@ struct DoorControlView: View {
             Toggle(isOn: $viewModel.isDoorOpen) {
                 Text(viewModel.isDoorOpen ? "Close Door" : "Open Door")
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(AppTheme.text)
             }
-            .toggleStyle(SwitchToggleStyle(tint: .blue))
-            .disabled(viewModel.isLoading) // door control disabled while loading
+            .toggleStyle(SwitchToggleStyle(tint: AppTheme.gradientStart))
+            .disabled(viewModel.isLoading)
             .onChange(of: viewModel.isDoorOpen) { newValue in
-                // Toggle door with the requested state
                 viewModel.toggleDoor(open: newValue)
             }
             
@@ -22,8 +20,9 @@ struct DoorControlView: View {
                 .disabled(viewModel.isLoading)
         }
         .padding()
-        .background(Color(UIColor.systemBackground))
+        .background(AppTheme.cardBg)
         .cornerRadius(15)
-        .shadow(radius: 5)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 8)
     }
 }

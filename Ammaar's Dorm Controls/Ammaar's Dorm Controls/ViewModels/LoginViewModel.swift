@@ -9,8 +9,6 @@ class LoginViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: AppError?
     
-    private var cancellables = Set<AnyCancellable>()
-    
     func checkAuthStatus() {
         isCheckingAuthStatus = true
         NetworkManager.shared.checkAuthStatus { [weak self] result in
@@ -22,8 +20,7 @@ class LoginViewModel: ObservableObject {
                     if !authStatus.authRequired {
                         self?.isAuthenticated = true
                     } else {
-                        // If we have a token, consider user authenticated
-                        if SecureStorage.shared.getAuthToken() != nil {
+                        if let _ = SecureStorage.shared.getAuthToken() {
                             self?.isAuthenticated = true
                         }
                     }
