@@ -12,9 +12,9 @@ struct DoorControlView: View {
                     .foregroundColor(.primary)
             }
             .toggleStyle(SwitchToggleStyle(tint: .blue))
-            .disabled(viewModel.isLoading)
+            .disabled(viewModel.isLoading) // door control disabled while loading
             .onChange(of: viewModel.isDoorOpen) { newValue in
-                // Call toggleDoor with the exact requested state rather than toggling inside the view model
+                // Toggle door with the requested state
                 viewModel.toggleDoor(open: newValue)
             }
             

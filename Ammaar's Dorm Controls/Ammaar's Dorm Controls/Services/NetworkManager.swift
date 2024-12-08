@@ -26,10 +26,6 @@ enum NetworkError: Error {
 class NetworkManager {
     static let shared = NetworkManager()
     
-    // If password protected, user must enter password at login screen
-    // The session token from successful login is stored in SecureStorage
-    // For requests requiring auth, we add the token as "Authorization" header
-    
     private init() {}
     
     private func getAuthToken() -> String? {
@@ -66,7 +62,6 @@ class NetworkManager {
             } catch {
                 completion(.failure(.decodingError))
             }
-            
         }.resume()
     }
     
@@ -116,7 +111,6 @@ class NetworkManager {
             } catch {
                 completion(.failure(.decodingError))
             }
-            
         }.resume()
     }
     

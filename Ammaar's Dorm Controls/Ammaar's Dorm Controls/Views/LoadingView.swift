@@ -8,6 +8,7 @@ struct LoadingView: View {
             ProgressView()
             Text(message)
                 .font(.headline)
+                .foregroundColor(.primary)
         }
         .padding()
     }

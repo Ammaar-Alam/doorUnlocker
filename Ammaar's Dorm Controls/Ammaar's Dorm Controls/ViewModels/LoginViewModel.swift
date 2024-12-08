@@ -20,11 +20,10 @@ class LoginViewModel: ObservableObject {
                 case .success(let authStatus):
                     self?.authRequired = authStatus.authRequired
                     if !authStatus.authRequired {
-                        // If auth not required, mark authenticated automatically
                         self?.isAuthenticated = true
                     } else {
-                        // If token stored previously?
-                        if let _ = SecureStorage.shared.getAuthToken() {
+                        // If we have a token, consider user authenticated
+                        if SecureStorage.shared.getAuthToken() != nil {
                             self?.isAuthenticated = true
                         }
                     }
@@ -49,6 +48,7 @@ class LoginViewModel: ObservableObject {
                 case .success(let token):
                     SecureStorage.shared.setAuthToken(token)
                     self?.isAuthenticated = true
+                    self?.password = ""
                 case .failure(let error):
                     self?.errorMessage = AppError(message: error.localizedDescription)
                 }

@@ -7,29 +7,9 @@ struct MyDormDoorApp: App {
     
     var body: some Scene {
         WindowGroup {
-            RootView()
+            ContentView()
                 .environmentObject(doorViewModel)
                 .environmentObject(loginViewModel)
-        }
-    }
-}
-
-struct RootView: View {
-    @EnvironmentObject var loginViewModel: LoginViewModel
-    @EnvironmentObject var doorViewModel: DoorControlViewModel
-    
-    var body: some View {
-        Group {
-            if loginViewModel.isCheckingAuthStatus {
-                LoadingView(message: "Checking Authorization...")
-            } else if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
-                LoginView()
-            } else {
-                ContentView()
-            }
-        }
-        .onAppear {
-            loginViewModel.checkAuthStatus()
         }
     }
 }

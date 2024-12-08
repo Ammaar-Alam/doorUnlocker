@@ -8,7 +8,6 @@ class DoorControlViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
-    // Updated: We now have a method that takes the desired state (open or closed) instead of toggling.
     func toggleDoor(open: Bool) {
         isLoading = true
         let command = open ? "open" : "close"
@@ -17,7 +16,6 @@ class DoorControlViewModel: ObservableObject {
                 self?.isLoading = false
                 switch result {
                 case .success():
-                    // Directly set the door state to the requested state
                     self?.isDoorOpen = open
                 case .failure(let error):
                     self?.errorMessage = AppError(message: error.localizedDescription)

@@ -1,8 +1,5 @@
 import Foundation
 
-// A simple storage for the auth token using UserDefaults.
-// In production, consider using Keychain for security.
-
 class SecureStorage {
     static let shared = SecureStorage()
     private let tokenKey = "authTokenKey"
