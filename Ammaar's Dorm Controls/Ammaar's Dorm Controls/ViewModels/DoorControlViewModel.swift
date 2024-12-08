@@ -23,15 +23,16 @@ class DoorControlViewModel: ObservableObject {
         }
     }
     
-    func toggleDoor() {
-        let command = isDoorOpen ? "close" : "open"
+    func toggleDoor(open: Bool) {
         isLoading = true
+        let command = open ? "open" : "close"
         NetworkManager.shared.sendCommand(command: command) { [weak self] result in
             DispatchQueue.main.async {
                 self?.isLoading = false
                 switch result {
                 case .success():
-                    self?.isDoorOpen.toggle()
+                    // Set state to what we requested
+                    self?.isDoorOpen = open
                 case .failure(let error):
                     self?.errorMessage = AppError(message: error.localizedDescription)
                 }

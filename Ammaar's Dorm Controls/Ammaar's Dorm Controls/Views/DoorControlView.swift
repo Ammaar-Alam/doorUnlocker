@@ -20,7 +20,7 @@ struct DoorControlView: View {
                 .disabled(viewModel.isLoading)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color(UIColor.systemBackground))
         .cornerRadius(15)
         .shadow(radius: 5)
     }
