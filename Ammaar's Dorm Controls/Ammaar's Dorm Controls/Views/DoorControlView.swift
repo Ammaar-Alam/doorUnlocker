@@ -10,7 +10,8 @@ struct DoorControlView: View {
                     .font(.headline)
                     .foregroundColor(AppTheme.text)
             }
-            .toggleStyle(SwitchToggleStyle(tint: AppTheme.gradientStart))
+            // Color toggle: red if open, green if closed
+            .toggleStyle(SwitchToggleStyle(tint: viewModel.isDoorOpen ? .red : .green))
             .disabled(viewModel.isLoading)
             .onChange(of: viewModel.isDoorOpen) { newValue in
                 viewModel.toggleDoor(open: newValue)
