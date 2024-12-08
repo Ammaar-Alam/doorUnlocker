@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" 
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Ammaar's Dorm Controls</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.yourcompany.doorapp</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <key>UIApplicationSupportsMultipleScenes</key>
+    <true/>
+
+    <key>UISceneConfigurations</key>
+    <dict>
+        <key>UIWindowSceneSessionRoleApplication</key>
+        <array>
+            <dict>
+                <key>UISceneClassName</key>
+                <string>UIWindowScene</string>
+                <key>UISceneDelegateClassName</key>
+                <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+            </dict>
+        </array>
+    </dict>
+
+    <key>UIApplicationShortcutItems</key>
+    <array>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>com.yourcompany.doorapp.open3sec</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Open Door (3 Seconds)</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>Compose</string>
+        </dict>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>com.yourcompany.doorapp.open</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Open Door</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>Play</string>
+        </dict>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>com.yourcompany.doorapp.close</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Close Door</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>Pause</string>
+        </dict>
+        <dict>
+            <key>UIApplicationShortcutItemType</key>
+            <string>com.yourcompany.doorapp.status</string>
+            <key>UIApplicationShortcutItemTitle</key>
+            <string>Door Status</string>
+            <key>UIApplicationShortcutItemIconType</key>
+            <string>Search</string>
+        </dict>
+    </array>
+</dict>
+</plist>

@@ -4,7 +4,7 @@ import SwiftUI
 struct MyDormDoorApp: App {
     @StateObject var doorViewModel = DoorControlViewModel()
     @StateObject var loginViewModel = LoginViewModel()
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
