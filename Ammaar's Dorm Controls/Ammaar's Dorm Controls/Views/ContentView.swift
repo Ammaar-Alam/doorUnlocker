@@ -233,7 +233,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 20) {
             shimmerTitle("About This Project")
 
-            Text("This is a personal project ...")
+            Text("This is a personal project I worked on over the summer. The toggle above really does open or close my door. It sends a command to my proxy server which routes that command to the Arduino IoT Cloud, relaying the command to the Arduino. That Arduino is connected to a motor driver which then spins a DC motor, reeling a fishing line knotted around my door handle, pulling it down.")
                 .foregroundColor(AppTheme.text)
                 .font(.body)
                 .fixedSize(horizontal: false, vertical: true)
