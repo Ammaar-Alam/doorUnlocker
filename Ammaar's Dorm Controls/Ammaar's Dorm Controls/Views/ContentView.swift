@@ -8,6 +8,8 @@ struct ContentView: View {
     @State private var showingLaunchMessage: Bool = false
     @State private var launchMessage: String = ""
 
+    @Binding var pendingShortcutAction: ShortcutActionType?
+
     var body: some View {
         ZStack {
             NetworkBackgroundView()
@@ -38,11 +40,10 @@ struct ContentView: View {
         .onAppear {
             loginViewModel.checkAuthStatus()
             animateShimmer = true
-
-            // Handle any requested shortcut action now that the app UI is ready.
-            if let action = SceneDelegate.requestedShortcutAction {
-                SceneDelegate.requestedShortcutAction = nil
-                performShortcutAction(action)
+        }
+        .onChange(of: loginViewModel.isAuthenticated) { isAuth in
+            if isAuth {
+                tryPerformShortcutAction()
             }
         }
         .alert(isPresented: $showingLaunchMessage) {
@@ -56,23 +57,26 @@ struct ContentView: View {
         }
     }
 
-    private func performShortcutAction(_ action: ShortcutActionType) {
-        // Make sure user is authenticated if required
-        // If authentication is required and not done, show message that you must log in
+    private func tryPerformShortcutAction() {
+        guard let action = pendingShortcutAction else { return }
+        pendingShortcutAction = nil
+
         if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
             launchMessage = "Please log in to perform this action."
             showingLaunchMessage = true
             return
         }
 
+        performShortcutAction(action)
+    }
+
+    private func performShortcutAction(_ action: ShortcutActionType) {
         switch action {
         case .open3sec:
-            // Open immediately
             NetworkManager.shared.sendCommand(command: "open") { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success():
-                        // Wait 3 seconds then close
                         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                             NetworkManager.shared.sendCommand(command: "close") { res2 in
                                 DispatchQueue.main.async {
