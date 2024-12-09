@@ -36,7 +36,7 @@ struct DoorActionIntent: AppIntent {
     @Parameter(title: "Action", default: .open)
     var action: DoorAction
 
-    func perform() async throws -> some IntentResult {
+    func perform() async throws -> some IntentResult & ProvidesDialog {
         try await performDoorCommand(action.rawValue)
         return .result(dialog: "Performed \(action) action on the door.")
     }
@@ -47,7 +47,7 @@ struct OpenDoorIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Door"
     static var description = IntentDescription("Opens the dorm door immediately.")
 
-    func perform() async throws -> some IntentResult {
+    func perform() async throws -> some IntentResult & ProvidesDialog {
         try await performDoorCommand("open")
         return .result(dialog: "Door opened successfully!")
     }
@@ -58,7 +58,7 @@ struct OpenDoorIn3SecIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Door (3 Seconds)"
     static var description = IntentDescription("Opens the door immediately, waits 3 seconds, then closes it.")
 
-    func perform() async throws -> some IntentResult {
+    func perform() async throws -> some IntentResult & ProvidesDialog {
         try await performDoorCommand("open")
         try await Task.sleep(nanoseconds: 3_000_000_000)
         try await performDoorCommand("close")
@@ -71,7 +71,7 @@ struct CloseDoorIntent: AppIntent {
     static var title: LocalizedStringResource = "Close Door"
     static var description = IntentDescription("Closes the dorm door.")
 
-    func perform() async throws -> some IntentResult {
+    func perform() async throws -> some IntentResult & ProvidesDialog {
         try await performDoorCommand("close")
         return .result(dialog: "Door closed successfully!")
     }
