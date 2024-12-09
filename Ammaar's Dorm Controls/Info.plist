@@ -68,5 +68,7 @@
         <string>DoorActionIntent</string>
         <string>GetDoorStatusIntent</string>
     </array>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
 </dict>
 </plist>
