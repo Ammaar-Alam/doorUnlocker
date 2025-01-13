@@ -1,6 +1,6 @@
 // redirect to HTTPS if accessed over HTTP
 // not necessary, but google crawler/url inspect is slow to update cache
-if (window.location.protocol !== "https:") {
+if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.protocol !== "https:") {
   window.location.href =
     "https://" + window.location.hostname + window.location.pathname + window.location.search;
 }
@@ -25,6 +25,8 @@ document.addEventListener("DOMContentLoaded", function () {
         localStorage.setItem("authToken", data.token);
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
+        // After successful login, fetch the current door status to sync UI.
+        getDoorStatus();
       } else {
         document.getElementById("login-error").style.display = "block";
       }
@@ -45,27 +47,58 @@ document.addEventListener("DOMContentLoaded", function () {
         // if auth isn't required, hide login and show control panel
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
+        getDoorStatus();
       }
     })
     .catch((error) => console.error("Error checking auth status:", error));
 
+  // fetch door status from server
+  async function getDoorStatus() {
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (authRequired) {
+        const token = localStorage.getItem("authToken");
+        if (token) {
+          headers["Authorization"] = token;
+        }
+      }
+      const response = await fetch("/status", {
+        method: "GET",
+        headers,
+      });
+      if (!response.ok) {
+        console.error("Failed to get door status:", await response.text());
+        return;
+      }
+      const data = await response.json();
+      setToggle(data.doorOpen);
+    } catch (error) {
+      console.error("Error fetching door status:", error);
+    }
+  }
+
+  // set toggle state based on doorOpen boolean
+  function setToggle(isOpen) {
+    const doorSwitch = document.getElementById("doorSwitch");
+    doorSwitch.checked = !!isOpen;
+    updateStatus();
+  }
+
   async function sendCommand(command) {
     try {
+      const headers = { "Content-Type": "application/json" };
       if (authRequired) {
-        // if auth is required, check for token
         const token = localStorage.getItem("authToken");
         if (!token) {
-          console.error("No auth token found. please log in again.");
+          console.error("No auth token found. Please log in again.");
           return;
         }
+        headers["Authorization"] = token;
       }
 
       const response = await fetch("/command", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authRequired ? localStorage.getItem("authToken") : "", // only add token if auth is required
-        },
+        headers,
         body: JSON.stringify({ command }),
       });
 
@@ -74,8 +107,9 @@ document.addEventListener("DOMContentLoaded", function () {
         console.error("Failed to send command:", errorDetail);
         return;
       }
-
       console.log(await response.text());
+      // Refresh door status after sending command so UI stays in sync
+      getDoorStatus();
     } catch (error) {
       console.error("Error during the request:", error);
     }
@@ -86,15 +120,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const openStatus = document.getElementById("open");
     const closedStatus = document.getElementById("closed");
 
-    if (!doorSwitch.checked) {
-      closedStatus.style.color = "rgba(76, 175, 80, 1)"; // solid green
-      openStatus.style.color = "#888"; // default gray
-    } else {
+    // If switch is checked, door is considered open; otherwise closed
+    if (doorSwitch.checked) {
       openStatus.style.color = "rgba(255, 94, 85, 1)"; // solid red
       closedStatus.style.color = "#888"; // default gray
+    } else {
+      closedStatus.style.color = "rgba(76, 175, 80, 1)"; // solid green
+      openStatus.style.color = "#888"; // default gray
     }
   }
 
+  // handle user toggling the switch
   function toggleSwitch() {
     const doorSwitch = document.getElementById("doorSwitch");
     const command = doorSwitch.checked ? "open" : "close";
@@ -102,49 +138,30 @@ document.addEventListener("DOMContentLoaded", function () {
     updateStatus();
   }
 
-  async function emergencyClose() {
-    try {
-      if (authRequired) {
-        // if auth is required, check for token
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-          console.error("No auth token found. please log in again.");
-          return;
-        }
-      }
+  // manual open door
+  function manualOpen() {
+    sendCommand("open");
+  }
 
-      const response = await fetch("/emergency-close", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authRequired ? localStorage.getItem("authToken") : "", // only add token if auth is required
-        },
-      });
-
-      if (!response.ok) {
-        const errorDetail = await response.text();
-        console.error("Failed to send emergency close command:", errorDetail);
-        return;
-      }
-
-      console.log(await response.text());
-    } catch (error) {
-      console.error("Error during emergency close request:", error);
-    }
+  // manual close door
+  function manualClose() {
+    sendCommand("close");
   }
 
   const doorSwitch = document.getElementById("doorSwitch");
   if (doorSwitch) {
-    doorSwitch.onclick = toggleSwitch;
-    updateStatus(); // initialize the status on page load
+    doorSwitch.addEventListener("change", toggleSwitch);
   } else {
     console.error("doorSwitch element not found");
   }
 
-  const emergencyCloseButton = document.getElementById("emergencyCloseButton");
-  if (emergencyCloseButton) {
-    emergencyCloseButton.onclick = emergencyClose;
-  } else {
-    console.error("emergencyCloseButton element not found");
+  // new manual open/close buttons
+  const openButton = document.getElementById("manualOpenButton");
+  const closeButton = document.getElementById("manualCloseButton");
+  if (openButton) {
+    openButton.onclick = manualOpen;
+  }
+  if (closeButton) {
+    closeButton.onclick = manualClose;
   }
 });

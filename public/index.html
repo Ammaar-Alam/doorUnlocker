@@ -37,13 +37,16 @@
                     </label>
                     <span class="status-text" id="open">OPEN</span>
                 </div>
-                <button id="emergencyCloseButton">Emergency Close / Untangle</button>
+                <div class="manual-buttons-container">
+                    <button id="manualOpenButton" class="manual-btn open-btn">[MANUAL] Open Door</button>
+                    <button id="manualCloseButton" class="manual-btn close-btn">[MANUAL] Close Door</button>
+                </div>
                 <p
-                    style="font-size: 12px; font-family: sans-serif; text-align center; color: #848482"
+                    style="font-size: 12px; font-family: sans-serif; text-align: center; color: #848482; margin-top: 20px;"
                 >
-                    <i
-                        >PS: i know my friends, and to avoid getting kidnapped in the middle of the
-                        night, i enable password authentication when I sleep or when i'm gone for
+                    <i>
+                        PS: i know my friends, and to avoid getting kidnapped in the
+                        middle of the night, i enable password authentication when I sleep or when i'm gone for
                         days :P
                     </i>
                 </p>
@@ -52,23 +55,21 @@
                 <h2>About This Project</h2>
                 <p>
                     This is a personal project I worked on over the summer. The switch at the top
-                    really does open or close my door hehe; it sends a command to my proxy server
-                    which routes that command to the Arduino IoT cloud server, relaying that command
-                    to the arduino. That arduino is connected to a motor driver which then spins a
-                    DC motor, reeling a fishing line knotted around my door handle, pulling it down.
+                    really does open or close my door; it sends a command to my proxy server
+                    which routes that command to the Arduino IoT cloud server, and then the Arduino
+                    is connected to a motor driver and DC motor that reels a fishing line around my
+                    door handle.
                 </p>
                 <p>
-                    For now, I don't really plan to add any more automation, this project was mainly
-                    inspired by my girlfriend, who joked about wanting to have her own prox for my
-                    room, and (just partly) by my very real problem of locking myself out somewhat
-                    frequently; although it was really fun to learn how to work with arduinos and
-                    circuitry,,, so maybe idk
+                    For now, I don't plan to add more automation. This project was partly
+                    inspired by my girlfriend wanting her own prox for my room, and partly by
+                    my real problem of locking myself out frequently. So, it was fun to learn about
+                    Arduinos and circuitry along the way.
                 </p>
                 <p class="disclaimer">
                     <i>
-                        All the parts I used, including those bought and printed, are all open
-                        source on the Github Repo, including the code, so feel free to make one
-                        yourself :)
+                        All the parts I used, including 3D-printed components and code, are open
+                        source on the Github Repo. Feel free to try making one yourself!
                     </i>
                 </p>
                 <hr />
