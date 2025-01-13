@@ -259,24 +259,44 @@ footer p {
         align-items: stretch;
         padding: 10px;
     }
-    
+
     .social-links a {
         justify-content: center;
     }
 }
+
 #emergencyCloseButton {
-    background-color: #ff0d00; /* red */
-    color: #f8f7f9; /* seasalt */
-    border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    margin-top: 20px;
-    margin-bottom: 10px;
+    display: none; /* Removed the old emergency close button. */
 }
 
-#emergencyCloseButton:hover {
-    background-color: #b80900; /* this colour is called "engineering orange" lol seems fitting */
+.manual-buttons-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 20px;
+}
+
+.manual-btn {
+    border: none;
+    border-radius: 5px;
+    padding: 12px 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    color: #f8f7f9; /* seasalt */
+    background-color: #444; /* fallback */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.manual-btn:hover {
+    opacity: 0.9;
+}
+
+.open-btn {
+    background-color: #4caf50; /* green */
+}
+
+.close-btn {
+    background-color: #ff5e55; /* red */
 }
