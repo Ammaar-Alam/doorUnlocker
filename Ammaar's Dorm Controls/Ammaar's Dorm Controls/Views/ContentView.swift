@@ -23,18 +23,53 @@ struct ContentView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 30) {
                         
-                        // Door Controls: Visible but disabled when not authenticated.
-                        ZStack {
-                            doorControlSection
-                                .disabled(!loginViewModel.isAuthenticated && loginViewModel.authRequired)
+                        // Door Controls: Status is always visible.
+                        VStack(spacing: 20) {
+                            shimmerTitle("Door Controls")
                             
-                            // Show locked overlay on door controls if auth is required and not authenticated.
-                            if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
-                                lockedOverlay()
+                            // Always-visible door status
+                            StatusView(isDoorOpen: viewModel.isDoorOpen)
+                            
+                            // Interactive controls wrapped in a ZStack
+                            ZStack {
+                                // Interactive part
+                                VStack(spacing: 20) {
+                                    DoorControlView(viewModel: viewModel)
+                                    
+                                    if viewModel.isLoading {
+                                        ProgressView("Processing...")
+                                            .tint(AppTheme.primary)
+                                            .padding()
+                                    }
+                                    
+                                    if loginViewModel.authRequired && loginViewModel.isAuthenticated {
+                                        Button("Logout") {
+                                            loginViewModel.logout()
+                                            viewModel.stopAutoRefresh()
+                                        }
+                                        .font(.headline)
+                                        .foregroundColor(AppTheme.background)
+                                        .padding()
+                                        .background(AppTheme.highlightGradient)
+                                        .cornerRadius(10)
+                                        .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
+                                        .padding(.bottom, 20)
+                                    }
+                                }
+                                
+                                // Overlay on interactive controls when locked
+                                if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
+                                    lockedOverlayInteractive()
+                                }
                             }
                         }
+                        .padding()
+                        .background(AppTheme.cardBg)
+                        .cornerRadius(15)
+                        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
+                        .shadow(color: .black.opacity(0.5), radius: 8)
                         
-                        // Doorbell section remains interactive regardless.
+                        // Doorbell section remains accessible regardless of auth.
                         doorbellSection
                         
                         aboutSection
@@ -52,7 +87,7 @@ struct ContentView: View {
                             .cornerRadius(10)
                             .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
                         }
-
+                        
                         Spacer(minLength: 50)
                     }
                     .padding(.top, 50)
@@ -63,7 +98,6 @@ struct ContentView: View {
                 loginViewModel.checkAuthStatus()
                 animateShimmer = true
             }
-            // Update showLoginSheet based on changes.
             .onChange(of: loginViewModel.authRequired) { newValue in
                 if newValue && !loginViewModel.isAuthenticated {
                     showLoginSheet = true
@@ -76,11 +110,9 @@ struct ContentView: View {
                     showLoginSheet = false
                 } else if loginViewModel.authRequired {
                     viewModel.stopAutoRefresh()
-                    // Optionally, you might want to auto-show the sheet here,
-                    // but we allow the user to see the locked overlay with a login button.
+                    // Allow locked overlay to remain; user can tap its login button to log in.
                 }
             }
-            // Present the login modal using the mutable state variable.
             .sheet(isPresented: $showLoginSheet) {
                 LoginModalView(onDismiss: {
                     showLoginSheet = false
@@ -108,9 +140,8 @@ struct ContentView: View {
         }
     }
     
-    // MARK: - Locked Overlay
-    /// This overlay appears over door controls when the door is locked.
-    private func lockedOverlay() -> some View {
+    // MARK: - Locked Overlay for Interactive Controls
+    private func lockedOverlayInteractive() -> some View {
         ZStack {
             Color.black.opacity(0.5)
             VStack(spacing: 10) {
@@ -121,7 +152,7 @@ struct ContentView: View {
                     .font(.title2)
                     .foregroundColor(.white)
                     .bold()
-                Text("Enter password to unlock")
+                Text("Interactive controls are disabled")
                     .font(.body)
                     .foregroundColor(.white)
                 Button(action: {
@@ -161,7 +192,6 @@ struct ContentView: View {
             showingLaunchMessage = true
             return
         }
-
         performShortcutAction(action)
     }
 
@@ -237,41 +267,6 @@ struct ContentView: View {
     
     // MARK: - UI Sections
 
-    private var doorControlSection: some View {
-        VStack(spacing: 20) {
-            shimmerTitle("Door Controls")
-
-            StatusView(isDoorOpen: viewModel.isDoorOpen)
-
-            DoorControlView(viewModel: viewModel)
-
-            if viewModel.isLoading {
-                ProgressView("Processing...")
-                    .tint(AppTheme.primary)
-                    .padding()
-            }
-
-            if loginViewModel.authRequired && loginViewModel.isAuthenticated {
-                Button("Logout") {
-                    loginViewModel.logout()
-                    viewModel.stopAutoRefresh()
-                }
-                .font(.headline)
-                .foregroundColor(AppTheme.background)
-                .padding()
-                .background(AppTheme.highlightGradient)
-                .cornerRadius(10)
-                .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
-                .padding(.bottom, 20)
-            }
-        }
-        .padding()
-        .background(AppTheme.cardBg)
-        .cornerRadius(15)
-        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
-        .shadow(color: .black.opacity(0.5), radius: 8)
-    }
-    
     private var doorbellSection: some View {
         VStack(alignment: .center, spacing: 20) {
             shimmerTitle("Ring Doorbell")
