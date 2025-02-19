@@ -20,12 +20,18 @@
             <section id="login-section">
                 <h2>Login</h2>
                 <form id="login-form">
-                    <input type="password" id="password" placeholder="Enter password" required />
+                    <input type="password" id="password" class="styled-input" placeholder="Enter password" required />
                     <button type="submit">Login</button>
                 </form>
                 <p id="login-error" style="color: red; display: none">
                     Invalid password. Please try again.
                 </p>
+            </section>
+            <!-- New Doorbell Section -->
+            <section id="doorbell-section" style="display: none;">
+                <h2>Ring Doorbell</h2>
+                <input type="text" id="doorbellMessage" class="styled-input" placeholder="Enter custom message (optional)" />
+                <button id="ringDoorbellButton">Ring Doorbell</button>
             </section>
             <section class="control-panel" style="display: none">
                 <h2>Door Status</h2>
@@ -41,13 +47,9 @@
                     <button id="manualOpenButton" class="manual-btn open-btn">[MANUAL] Open Door</button>
                     <button id="manualCloseButton" class="manual-btn close-btn">[MANUAL] Close Door</button>
                 </div>
-                <p
-                    style="font-size: 12px; font-family: sans-serif; text-align: center; color: #848482; margin-top: 20px;"
-                >
+                <p style="font-size: 12px; font-family: sans-serif; text-align: center; color: #848482; margin-top: 20px;">
                     <i>
-                        PS: i know my friends, and to avoid getting kidnapped in the
-                        middle of the night, i enable password authentication when I sleep or when i'm gone for
-                        days :P
+                        PS: i know my friends, and to avoid getting kidnapped in the middle of the night, i enable password authentication when I sleep or when i'm gone for days :P
                     </i>
                 </p>
             </section>
@@ -76,24 +78,24 @@
                 <h2>Connect with Me</h2>
                 <ul class="social-links">
                     <li>
-                        <a href="https://ammaaralam.com" target="_blank"
-                            ><i class="fas fa-camera-retro"></i> Coding Portfolio / Personal Site</a
-                        >
+                        <a href="https://ammaaralam.com" target="_blank">
+                            <i class="fas fa-camera-retro"></i> Coding Portfolio / Personal Site
+                        </a>
                     </li>
                     <li>
-                        <a href="https://github.com/Ammaar-Alam/doorUnlocker" target="_blank"
-                            ><i class="fab fa-github"></i> GitHub</a
-                        >
+                        <a href="https://github.com/Ammaar-Alam/doorUnlocker" target="_blank">
+                            <i class="fab fa-github"></i> GitHub
+                        </a>
                     </li>
                     <li>
-                        <a href="https://www.linkedin.com/in/Ammaar-Alam" target="_blank"
-                            ><i class="fab fa-linkedin"></i> LinkedIn</a
-                        >
+                        <a href="https://www.linkedin.com/in/Ammaar-Alam" target="_blank">
+                            <i class="fab fa-linkedin"></i> LinkedIn
+                        </a>
                     </li>
                     <li>
-                        <a href="https://ammaar.xyz" target="_blank"
-                            ><i class="fas fa-camera-retro"></i> Photography Portfolio</a
-                        >
+                        <a href="https://ammaar.xyz" target="_blank">
+                            <i class="fas fa-camera-retro"></i> Photography Portfolio
+                        </a>
                     </li>
                 </ul>
             </section>

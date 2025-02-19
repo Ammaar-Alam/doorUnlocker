@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
         localStorage.setItem("authToken", data.token);
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
+        document.querySelector("#doorbell-section").style.display = "block";
         // After successful login, fetch the current door status to sync UI.
         getDoorStatus();
       } else {
@@ -44,9 +45,10 @@ document.addEventListener("DOMContentLoaded", function () {
     .then((data) => {
       authRequired = data.authRequired; // store the authRequired status
       if (!authRequired) {
-        // if auth isn't required, hide login and show control panel
+        // if auth isn't required, hide login and show control panel and doorbell section
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
+        document.querySelector("#doorbell-section").style.display = "block";
         getDoorStatus();
       }
     })
@@ -148,6 +150,34 @@ document.addEventListener("DOMContentLoaded", function () {
     sendCommand("close");
   }
 
+  // Doorbell functionality
+  function ringDoorbell() {
+    const doorbellInput = document.getElementById("doorbellMessage");
+    const message = doorbellInput.value || "Default doorbell ring: Someone rang your doorbell!";
+    const token = localStorage.getItem("authToken");
+    let headers = { "Content-Type": "application/json" };
+    if (authRequired && token) {
+      headers["Authorization"] = token;
+    }
+    fetch("/ring-doorbell", {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify({ message: message })
+    })
+    .then(response => {
+      if (response.ok) {
+        alert("Doorbell rung successfully!");
+        doorbellInput.value = "";
+      } else {
+        response.text().then(text => alert("Failed to ring doorbell: " + text));
+      }
+    })
+    .catch(error => {
+      console.error("Error sending doorbell request:", error);
+      alert("Error sending doorbell request.");
+    });
+  }
+
   const doorSwitch = document.getElementById("doorSwitch");
   if (doorSwitch) {
     doorSwitch.addEventListener("change", toggleSwitch);
@@ -163,5 +193,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   if (closeButton) {
     closeButton.onclick = manualClose;
+  }
+  
+  // event listener for doorbell button
+  const ringDoorbellButton = document.getElementById("ringDoorbellButton");
+  if (ringDoorbellButton) {
+    ringDoorbellButton.onclick = ringDoorbell;
   }
 });
