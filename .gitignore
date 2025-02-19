@@ -6,4 +6,5 @@ out
 .gitattributes
 *.iml
 /node_modules
-*/xcuserdata/
+*/xcuserdata/*
+/Ammaar's Dorm Controls/**/xcuserdata/
