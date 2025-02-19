@@ -19,23 +19,13 @@ struct ContentView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 30) {
-                        if loginViewModel.isCheckingAuthStatus {
-                            LoadingView(message: "Checking Authorization...")
-                                .padding(.top, 50)
-                        } else {
-                            if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
-                                loginFormSection
-                            } else {
-                                doorControlSection
-                            }
-                        }
+                        // If not authenticated & auth is required, the sheet will appear, so no need to show login form inline.
                         
-                        // New doorbell section moved above the About section
+                        doorControlSection
                         doorbellSection
-                        
                         aboutSection
                         connectSection
-                        
+
                         NavigationLink(destination: PortfolioView()) {
                             HStack {
                                 Image(systemName: "globe")
@@ -56,13 +46,28 @@ struct ContentView: View {
                 }
             }
             .onAppear {
+                // If the user is already authenticated or if auth is not required, we can start autoRefresh
+                if !loginViewModel.authRequired || loginViewModel.isAuthenticated {
+                    viewModel.startAutoRefresh()
+                }
                 loginViewModel.checkAuthStatus()
                 animateShimmer = true
             }
             .onChange(of: loginViewModel.isAuthenticated) { isAuth in
                 if isAuth {
+                    viewModel.startAutoRefresh()
                     tryPerformShortcutAction()
+                } else {
+                    viewModel.stopAutoRefresh()
                 }
+            }
+            .sheet(isPresented: Binding<Bool>(
+                get: { loginViewModel.authRequired && !loginViewModel.isAuthenticated },
+                set: { _ in }
+            )) {
+                // Present our styled modal for login
+                LoginModalView()
+                    .environmentObject(loginViewModel)
             }
             .alert(isPresented: $showingLaunchMessage) {
                 Alert(title: Text("Shortcut Action"), message: Text(launchMessage), dismissButton: .default(Text("OK")))
@@ -75,6 +80,8 @@ struct ContentView: View {
             }
         }
     }
+
+    // MARK: - Shortcut Actions
 
     private func tryPerformShortcutAction() {
         guard let action = pendingShortcutAction else { return }
@@ -110,7 +117,6 @@ struct ContentView: View {
                                 }
                             }
                         }
-
                     case .failure(let error):
                         self.launchMessage = "Failed to open door (3s): \(error.localizedDescription)"
                         self.showingLaunchMessage = true
@@ -118,7 +124,6 @@ struct ContentView: View {
                     }
                 }
             }
-
         case .open:
             NetworkManager.shared.sendCommand(command: "open") { result in
                 DispatchQueue.main.async {
@@ -132,7 +137,6 @@ struct ContentView: View {
                     self.viewModel.fetchStatus()
                 }
             }
-
         case .close:
             NetworkManager.shared.sendCommand(command: "close") { result in
                 DispatchQueue.main.async {
@@ -146,7 +150,6 @@ struct ContentView: View {
                     self.viewModel.fetchStatus()
                 }
             }
-
         case .status:
             NetworkManager.shared.fetchDoorStatus { result in
                 DispatchQueue.main.async {
@@ -163,51 +166,7 @@ struct ContentView: View {
         }
     }
 
-    private var loginFormSection: some View {
-        VStack(alignment: .center, spacing: 20) {
-            Text("Please Log In")
-                .font(.largeTitle)
-                .fontWeight(.semibold)
-                .gradientText()
-                .padding(.bottom, 10)
-                .frame(maxWidth: .infinity, alignment: .center)
-
-            SecureField("Enter Password", text: $loginViewModel.password)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .foregroundColor(AppTheme.text)
-                .padding(.horizontal)
-                .accentColor(AppTheme.primary)
-
-            if loginViewModel.isLoading {
-                ProgressView("Logging In...")
-                    .tint(AppTheme.primary)
-            } else {
-                Button(action: {
-                    loginViewModel.login()
-                }) {
-                    Text("Login")
-                        .font(.headline)
-                        .foregroundColor(AppTheme.background)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(AppTheme.highlightGradient)
-                        .cornerRadius(10)
-                        .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
-                }
-                .padding(.horizontal)
-            }
-
-            Text("Login to control the door. If you don't have the password, you can still view the info below.")
-                .font(.footnote)
-                .foregroundColor(AppTheme.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding()
-        .background(AppTheme.cardBg)
-        .cornerRadius(15)
-        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
-        .shadow(color: .black.opacity(0.5), radius: 8)
-    }
+    // MARK: - UI Sections
 
     private var doorControlSection: some View {
         VStack(spacing: 20) {
@@ -222,10 +181,12 @@ struct ContentView: View {
                     .tint(AppTheme.primary)
                     .padding()
             }
-
+            
+            // We can show a logout if user is authenticated and auth is required
             if loginViewModel.authRequired && loginViewModel.isAuthenticated {
                 Button("Logout") {
                     loginViewModel.logout()
+                    viewModel.stopAutoRefresh()
                 }
                 .font(.headline)
                 .foregroundColor(AppTheme.background)
@@ -241,14 +202,8 @@ struct ContentView: View {
         .cornerRadius(15)
         .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 8)
-        .onAppear {
-            if loginViewModel.isAuthenticated {
-                viewModel.fetchStatus()
-            }
-        }
     }
 
-    // New doorbell section with updated TextField style
     private var doorbellSection: some View {
         VStack(alignment: .center, spacing: 20) {
             shimmerTitle("Ring Doorbell")
@@ -322,6 +277,8 @@ struct ContentView: View {
         .shadow(color: .black.opacity(0.5), radius: 8)
     }
 
+    // MARK: - Helpers
+
     private func shimmerTitle(_ text: String) -> some View {
         ZStack {
             Text(text)
@@ -330,7 +287,12 @@ struct ContentView: View {
                 .foregroundColor(AppTheme.text)
 
             LinearGradient(
-                gradient: Gradient(colors: [AppTheme.gradientStart.opacity(0), AppTheme.gradientStart, AppTheme.gradientEnd, AppTheme.gradientStart.opacity(0)]),
+                gradient: Gradient(colors: [
+                    AppTheme.gradientStart.opacity(0),
+                    AppTheme.gradientStart,
+                    AppTheme.gradientEnd,
+                    AppTheme.gradientStart.opacity(0)
+                ]),
                 startPoint: .leading,
                 endPoint: .trailing
             )

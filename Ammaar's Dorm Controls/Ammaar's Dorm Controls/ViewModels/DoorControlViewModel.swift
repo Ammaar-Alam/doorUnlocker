@@ -7,7 +7,32 @@ class DoorControlViewModel: ObservableObject {
     @Published var errorMessage: AppError?
     
     private var cancellables = Set<AnyCancellable>()
+    private var autoRefreshTimer: Timer?
+
+    init() {
+        // won’t start the timer immediately (waiting till user logs in)
+    }
     
+    deinit {
+        autoRefreshTimer?.invalidate()
+    }
+
+    /// called when user is authenticated (contentview)
+    func startAutoRefresh() {
+        autoRefreshTimer?.invalidate()
+        autoRefreshTimer = Timer.scheduledTimer(withTimeInterval: 5.0,
+                                                repeats: true,
+                                                block: { [weak self] _ in
+            self?.fetchStatus()
+        })
+    }
+
+    /// stop auto‐refresh if user logs out or if u want to pause updates
+    func stopAutoRefresh() {
+        autoRefreshTimer?.invalidate()
+        autoRefreshTimer = nil
+    }
+
     func fetchStatus() {
         isLoading = true
         NetworkManager.shared.fetchDoorStatus { [weak self] result in
@@ -54,7 +79,7 @@ class DoorControlViewModel: ObservableObject {
         }
     }
     
-    // doorbell w custom msg
+    /// doorbell w custom msg
     func ringDoorbell(customMessage: String? = nil) {
         isLoading = true
         let message = (customMessage != nil && !customMessage!.isEmpty)

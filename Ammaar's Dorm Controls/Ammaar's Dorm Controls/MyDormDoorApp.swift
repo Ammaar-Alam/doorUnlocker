@@ -8,17 +8,15 @@ struct MyDormDoorApp: App {
 
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-                ContentView(pendingShortcutAction: $pendingShortcutAction)
-                    .environmentObject(doorViewModel)
-                    .environmentObject(loginViewModel)
-                    .onAppear {
-                        if let action = SceneDelegate.requestedShortcutAction {
-                            pendingShortcutAction = action
-                            SceneDelegate.requestedShortcutAction = nil
-                        }
+            ContentView(pendingShortcutAction: $pendingShortcutAction)
+                .environmentObject(doorViewModel)
+                .environmentObject(loginViewModel)
+                .onAppear {
+                    if let action = SceneDelegate.requestedShortcutAction {
+                        pendingShortcutAction = action
+                        SceneDelegate.requestedShortcutAction = nil
                     }
-            }
+                }
         }
     }
 }
