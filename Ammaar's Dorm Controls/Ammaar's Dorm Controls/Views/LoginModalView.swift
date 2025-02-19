@@ -2,19 +2,18 @@ import SwiftUI
 
 struct LoginModalView: View {
     @EnvironmentObject var loginViewModel: LoginViewModel
-    @Environment(\.dismiss) var dismiss
-    
+    var onDismiss: () -> Void
+
     var body: some View {
         ZStack {
             Color(hex: "#0a0a0a").edgesIgnoringSafeArea(.all)
-            
             VStack(spacing: 20) {
                 Text("Please Log In")
                     .font(.largeTitle)
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                     .padding(.bottom, 10)
-
+                
                 SecureField("Enter Password", text: $loginViewModel.password)
                     .padding()
                     .background(Color(hex: "#18181b"))
@@ -54,10 +53,9 @@ struct LoginModalView: View {
                     .foregroundColor(Color(hex: "#a1a1aa"))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-
-                // dismiss button
+                
                 Button(action: {
-                    dismiss()
+                    onDismiss()
                 }) {
                     Text("Dismiss")
                         .foregroundColor(.white)
@@ -67,10 +65,9 @@ struct LoginModalView: View {
             }
             .padding()
         }
-        // If user logs in successfully, dismiss automatically
         .onChange(of: loginViewModel.isAuthenticated) { newValue in
             if newValue {
-                dismiss()
+                onDismiss()
             }
         }
         .alert(item: $loginViewModel.errorMessage) { error in

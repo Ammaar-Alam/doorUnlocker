@@ -8,6 +8,9 @@ struct ContentView: View {
     @State private var showingLaunchMessage: Bool = false
     @State private var launchMessage: String = ""
     @State private var doorbellMessage: String = ""
+    
+    // Controls whether the login modal is shown.
+    @State private var showLoginSheet: Bool = false
 
     @Binding var pendingShortcutAction: ShortcutActionType?
 
@@ -20,11 +23,19 @@ struct ContentView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 30) {
                         
-                        doorControlSection
-                            .disabled(!loginViewModel.isAuthenticated && loginViewModel.authRequired)
-
+                        // Door Controls: Visible but disabled when not authenticated.
+                        ZStack {
+                            doorControlSection
+                                .disabled(!loginViewModel.isAuthenticated && loginViewModel.authRequired)
+                            
+                            // Show locked overlay on door controls if auth is required and not authenticated.
+                            if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
+                                lockedOverlay()
+                            }
+                        }
+                        
+                        // Doorbell section remains interactive regardless.
                         doorbellSection
-                            .disabled(!loginViewModel.isAuthenticated && loginViewModel.authRequired)
                         
                         aboutSection
                         connectSection
@@ -49,44 +60,96 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                // If user is already authenticated or if auth not required, start autoRefresh
-                if !loginViewModel.authRequired || loginViewModel.isAuthenticated {
-                    viewModel.startAutoRefresh()
-                }
                 loginViewModel.checkAuthStatus()
                 animateShimmer = true
+            }
+            // Update showLoginSheet based on changes.
+            .onChange(of: loginViewModel.authRequired) { newValue in
+                if newValue && !loginViewModel.isAuthenticated {
+                    showLoginSheet = true
+                }
             }
             .onChange(of: loginViewModel.isAuthenticated) { isAuth in
                 if isAuth {
                     viewModel.startAutoRefresh()
                     tryPerformShortcutAction()
-                } else {
+                    showLoginSheet = false
+                } else if loginViewModel.authRequired {
                     viewModel.stopAutoRefresh()
+                    // Optionally, you might want to auto-show the sheet here,
+                    // but we allow the user to see the locked overlay with a login button.
                 }
             }
-            // Present the login sheet if needed, but let user dismiss it
-            .sheet(isPresented: Binding<Bool>(
-                get: { loginViewModel.authRequired && !loginViewModel.isAuthenticated },
-                set: { _ in }
-            )) {
-                // iOS 16 approach: partial-screen sheet
-                LoginModalView()
-                    .environmentObject(loginViewModel)
-                    .presentationDetents([.medium, .large]) // half sheet or full
-                    .presentationDragIndicator(.visible)
+            // Present the login modal using the mutable state variable.
+            .sheet(isPresented: $showLoginSheet) {
+                LoginModalView(onDismiss: {
+                    showLoginSheet = false
+                })
+                .environmentObject(loginViewModel)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .interactiveDismissDisabled(false)
             }
             .alert(isPresented: $showingLaunchMessage) {
-                Alert(title: Text("Shortcut Action"), message: Text(launchMessage), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Shortcut Action"),
+                      message: Text(launchMessage),
+                      dismissButton: .default(Text("OK")))
             }
             .alert(item: $viewModel.errorMessage) { error in
-                Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"),
+                      message: Text(error.message),
+                      dismissButton: .default(Text("OK")))
             }
             .alert(item: $loginViewModel.errorMessage) { error in
-                Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"),
+                      message: Text(error.message),
+                      dismissButton: .default(Text("OK")))
             }
         }
     }
-
+    
+    // MARK: - Locked Overlay
+    /// This overlay appears over door controls when the door is locked.
+    private func lockedOverlay() -> some View {
+        ZStack {
+            Color.black.opacity(0.5)
+            VStack(spacing: 10) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(.white)
+                Text("LOCKED")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .bold()
+                Text("Enter password to unlock")
+                    .font(.body)
+                    .foregroundColor(.white)
+                Button(action: {
+                    showLoginSheet = true
+                }) {
+                    Text("Login")
+                        .font(.headline)
+                        .foregroundColor(Color(hex: "#0a0a0a"))
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color(hex: "#8ffcff"),
+                                Color(hex: "#4dc6ff")
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .cornerRadius(10)
+                        .shadow(color: Color(hex: "#8ffcff").opacity(0.4), radius: 10)
+                }
+                .padding(.top, 10)
+            }
+            .padding()
+        }
+        .cornerRadius(15)
+    }
+    
     // MARK: - Shortcut Handling
 
     private func tryPerformShortcutAction() {
@@ -171,7 +234,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     // MARK: - UI Sections
 
     private var doorControlSection: some View {
@@ -188,7 +251,6 @@ struct ContentView: View {
                     .padding()
             }
 
-            // Show logout only if user is authenticated & auth required
             if loginViewModel.authRequired && loginViewModel.isAuthenticated {
                 Button("Logout") {
                     loginViewModel.logout()
@@ -209,7 +271,7 @@ struct ContentView: View {
         .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 8)
     }
-
+    
     private var doorbellSection: some View {
         VStack(alignment: .center, spacing: 20) {
             shimmerTitle("Ring Doorbell")
@@ -241,7 +303,7 @@ struct ContentView: View {
         .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 8)
     }
-
+    
     private var aboutSection: some View {
         VStack(alignment: .leading, spacing: 20) {
             shimmerTitle("About This Project")
@@ -264,7 +326,7 @@ struct ContentView: View {
         .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 8)
     }
-
+    
     private var connectSection: some View {
         VStack(alignment: .center, spacing: 20) {
             shimmerTitle("Connect with Me")
@@ -282,7 +344,7 @@ struct ContentView: View {
         .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 8)
     }
-
+    
     // MARK: - Helpers
 
     private func shimmerTitle(_ text: String) -> some View {
@@ -291,7 +353,7 @@ struct ContentView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(AppTheme.text)
-
+            
             LinearGradient(
                 gradient: Gradient(colors: [
                     AppTheme.gradientStart.opacity(0),
@@ -313,7 +375,7 @@ struct ContentView: View {
         .frame(maxWidth: .infinity)
         .animation(.linear(duration: 2.0).repeatForever(autoreverses: true), value: animateShimmer)
     }
-
+    
     private func externalLinkButton(icon: String, text: String, url: String) -> some View {
         @State var isPressed = false
         return Button(action: {
