@@ -19,10 +19,13 @@ struct ContentView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 30) {
-                        // If not authenticated & auth is required, the sheet will appear, so no need to show login form inline.
                         
                         doorControlSection
+                            .disabled(!loginViewModel.isAuthenticated && loginViewModel.authRequired)
+
                         doorbellSection
+                            .disabled(!loginViewModel.isAuthenticated && loginViewModel.authRequired)
+                        
                         aboutSection
                         connectSection
 
@@ -46,7 +49,7 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                // If the user is already authenticated or if auth is not required, we can start autoRefresh
+                // If user is already authenticated or if auth not required, start autoRefresh
                 if !loginViewModel.authRequired || loginViewModel.isAuthenticated {
                     viewModel.startAutoRefresh()
                 }
@@ -61,13 +64,16 @@ struct ContentView: View {
                     viewModel.stopAutoRefresh()
                 }
             }
+            // Present the login sheet if needed, but let user dismiss it
             .sheet(isPresented: Binding<Bool>(
                 get: { loginViewModel.authRequired && !loginViewModel.isAuthenticated },
                 set: { _ in }
             )) {
-                // Present our styled modal for login
+                // iOS 16 approach: partial-screen sheet
                 LoginModalView()
                     .environmentObject(loginViewModel)
+                    .presentationDetents([.medium, .large]) // half sheet or full
+                    .presentationDragIndicator(.visible)
             }
             .alert(isPresented: $showingLaunchMessage) {
                 Alert(title: Text("Shortcut Action"), message: Text(launchMessage), dismissButton: .default(Text("OK")))
@@ -81,7 +87,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Shortcut Actions
+    // MARK: - Shortcut Handling
 
     private func tryPerformShortcutAction() {
         guard let action = pendingShortcutAction else { return }
@@ -181,8 +187,8 @@ struct ContentView: View {
                     .tint(AppTheme.primary)
                     .padding()
             }
-            
-            // We can show a logout if user is authenticated and auth is required
+
+            // Show logout only if user is authenticated & auth required
             if loginViewModel.authRequired && loginViewModel.isAuthenticated {
                 Button("Logout") {
                     loginViewModel.logout()
