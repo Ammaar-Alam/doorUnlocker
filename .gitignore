@@ -6,3 +6,4 @@ out
 .gitattributes
 *.iml
 /node_modules
+*/xcuserdata/
