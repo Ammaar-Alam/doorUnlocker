@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LoginModalView: View {
     @EnvironmentObject var loginViewModel: LoginViewModel
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         ZStack {
@@ -54,13 +54,23 @@ struct LoginModalView: View {
                     .foregroundColor(Color(hex: "#a1a1aa"))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+
+                // dismiss button
+                Button(action: {
+                    dismiss()
+                }) {
+                    Text("Dismiss")
+                        .foregroundColor(.white)
+                        .underline()
+                }
+                .padding(.top, 10)
             }
             .padding()
         }
+        // If user logs in successfully, dismiss automatically
         .onChange(of: loginViewModel.isAuthenticated) { newValue in
             if newValue {
-                // once authenticated, dismiss the modal
-                presentationMode.wrappedValue.dismiss()
+                dismiss()
             }
         }
         .alert(item: $loginViewModel.errorMessage) { error in
