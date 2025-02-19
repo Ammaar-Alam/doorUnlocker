@@ -1,107 +1,139 @@
-<!doctype html>
-<html>
-    <head>
-        <title>Ammaar's Dorm Controls</title>
-        <link rel="stylesheet" type="text/css" href="styles.css" />
-        <script src="script.js"></script>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Avenir:wght@300;400;700&family=Roboto:wght@300;400;700&display=swap"
-            rel="stylesheet"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ammaar's Dorm Controls</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="script.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Avenir:wght@300;400;700&family=Roboto:wght@300;400;700&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+  />
+</head>
+<body>
+  <header>
+    <h1>Ammaar's Dorm Room Controls</h1>
+  </header>
+  <main>
+    <!-- Login Section -->
+    <section id="login-section" class="card-section">
+      <h2 class="section-title">Login</h2>
+      <form id="login-form">
+        <input
+          type="password"
+          id="password"
+          class="styled-input"
+          placeholder="Enter password"
+          required
         />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    </head>
-    <body>
-        <header>
-            <h1>Ammaar's Dorm Room Controls</h1>
-        </header>
-        <main>
-            <section id="login-section">
-                <h2>Login</h2>
-                <form id="login-form">
-                    <input type="password" id="password" class="styled-input" placeholder="Enter password" required />
-                    <button type="submit">Login</button>
-                </form>
-                <p id="login-error" style="color: red; display: none">
-                    Invalid password. Please try again.
-                </p>
-            </section>
-            <!-- New Doorbell Section -->
-            <section id="doorbell-section" style="display: none;">
-                <h2>Ring Doorbell</h2>
-                <input type="text" id="doorbellMessage" class="styled-input" placeholder="Enter custom message (optional)" />
-                <button id="ringDoorbellButton">Ring Doorbell</button>
-            </section>
-            <section class="control-panel" style="display: none">
-                <h2>Door Status</h2>
-                <div class="toggle-container">
-                    <span class="status-text" id="closed">CLOSED</span>
-                    <label class="switch">
-                        <input type="checkbox" id="doorSwitch" />
-                        <span class="slider round"></span>
-                    </label>
-                    <span class="status-text" id="open">OPEN</span>
-                </div>
-                <div class="manual-buttons-container">
-                    <button id="manualOpenButton" class="manual-btn open-btn">[MANUAL] Open Door</button>
-                    <button id="manualCloseButton" class="manual-btn close-btn">[MANUAL] Close Door</button>
-                </div>
-                <p style="font-size: 12px; font-family: sans-serif; text-align: center; color: #848482; margin-top: 20px;">
-                    <i>
-                        PS: i know my friends, and to avoid getting kidnapped in the middle of the night, i enable password authentication when I sleep or when i'm gone for days :P
-                    </i>
-                </p>
-            </section>
-            <section class="info">
-                <h2>About This Project</h2>
-                <p>
-                    This is a personal project I worked on over the summer. The switch at the top
-                    really does open or close my door; it sends a command to my proxy server
-                    which routes that command to the Arduino IoT cloud server, and then the Arduino
-                    is connected to a motor driver and DC motor that reels a fishing line around my
-                    door handle.
-                </p>
-                <p>
-                    For now, I don't plan to add more automation. This project was partly
-                    inspired by my girlfriend wanting her own prox for my room, and partly by
-                    my real problem of locking myself out frequently. So, it was fun to learn about
-                    Arduinos and circuitry along the way.
-                </p>
-                <p class="disclaimer">
-                    <i>
-                        All the parts I used, including 3D-printed components and code, are open
-                        source on the Github Repo. Feel free to try making one yourself!
-                    </i>
-                </p>
-                <hr />
-                <h2>Connect with Me</h2>
-                <ul class="social-links">
-                    <li>
-                        <a href="https://ammaaralam.com" target="_blank">
-                            <i class="fas fa-camera-retro"></i> Coding Portfolio / Personal Site
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://github.com/Ammaar-Alam/doorUnlocker" target="_blank">
-                            <i class="fab fa-github"></i> GitHub
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://www.linkedin.com/in/Ammaar-Alam" target="_blank">
-                            <i class="fab fa-linkedin"></i> LinkedIn
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://ammaar.xyz" target="_blank">
-                            <i class="fas fa-camera-retro"></i> Photography Portfolio
-                        </a>
-                    </li>
-                </ul>
-            </section>
-        </main>
-        <footer>
-            <p>© 2024–25 Ammaar Alam. All rights reserved.</p>
-        </footer>
-    </body>
+        <button type="submit" class="styled-button gradient-btn">
+          Login
+        </button>
+      </form>
+      <p id="login-error" class="error-text" style="display: none;">
+        Invalid password. Please try again.
+      </p>
+    </section>
+
+    <!-- Ring Doorbell Section -->
+    <section id="doorbell-section" class="card-section" style="display: none;">
+      <h2 class="section-title">Ring Doorbell</h2>
+      <input
+        type="text"
+        id="doorbellMessage"
+        class="styled-input"
+        placeholder="Enter custom message (optional)"
+      />
+      <button id="ringDoorbellButton" class="styled-button gradient-btn">
+        Ring Doorbell
+      </button>
+    </section>
+
+    <!-- Door Controls -->
+    <section class="control-panel card-section" style="display: none">
+      <h2 class="section-title">Door Status</h2>
+      <div class="toggle-container">
+        <span class="status-text" id="closed">CLOSED</span>
+        <label class="switch">
+          <input type="checkbox" id="doorSwitch" />
+          <span class="slider round"></span>
+        </label>
+        <span class="status-text" id="open">OPEN</span>
+      </div>
+      <div class="manual-buttons-container">
+        <button id="manualOpenButton" class="manual-btn open-btn">
+          [MANUAL] Open Door
+        </button>
+        <button id="manualCloseButton" class="manual-btn close-btn">
+          [MANUAL] Close Door
+        </button>
+      </div>
+      <p class="note-text">
+        <i>
+          PS: i know my friends, and to avoid getting kidnapped in the middle of
+          the night, i enable password authentication when I sleep or when i'm
+          gone for days :P
+        </i>
+      </p>
+    </section>
+
+    <!-- Info Section -->
+    <section class="info card-section">
+      <h2 class="section-title">About This Project</h2>
+      <p>
+        This is a personal project I worked on over the summer. The switch at
+        the top really does open or close my door; it sends a command to my
+        proxy server which routes that command to the Arduino IoT cloud server,
+        and then the Arduino is connected to a motor driver and DC motor that
+        reels a fishing line around my door handle.
+      </p>
+      <p>
+        For now, I don't plan to add more automation. This project was partly
+        inspired by my girlfriend wanting her own prox for my room, and partly
+        by my real problem of locking myself out frequently. So, it was fun to
+        learn about Arduinos and circuitry along the way.
+      </p>
+      <p class="disclaimer">
+        <i>
+          All the parts I used, including 3D-printed components and code, are
+          open source on the Github Repo. Feel free to try making one yourself!
+        </i>
+      </p>
+      <hr />
+      <h2 class="section-title">Connect with Me</h2>
+      <ul class="social-links">
+        <li>
+          <a href="https://ammaaralam.com" target="_blank"
+            ><i class="fas fa-camera-retro"></i> Coding Portfolio / Personal
+            Site</a
+          >
+        </li>
+        <li>
+          <a href="https://github.com/Ammaar-Alam/doorUnlocker" target="_blank"
+            ><i class="fab fa-github"></i> GitHub</a
+          >
+        </li>
+        <li>
+          <a href="https://www.linkedin.com/in/Ammaar-Alam" target="_blank"
+            ><i class="fab fa-linkedin"></i> LinkedIn</a
+          >
+        </li>
+        <li>
+          <a href="https://ammaar.xyz" target="_blank"
+            ><i class="fas fa-camera-retro"></i> Photography Portfolio</a
+          >
+        </li>
+      </ul>
+    </section>
+  </main>
+  <footer>
+    <p>© 2024–25 Ammaar Alam. All rights reserved.</p>
+  </footer>
+</body>
 </html>
