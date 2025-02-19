@@ -4,6 +4,7 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import axios from "axios";
+import twilio from "twilio";
 
 // load env vars
 dotenv.config();
@@ -19,6 +20,12 @@ const SECRET_KEY = process.env.SECRET_KEY;
 const AUTH_REQUIRED = process.env.AUTH_REQUIRED === "true";
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
+
+// twilio env vars
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER;
+const TWILIO_TO_NUMBER = process.env.TWILIO_TO_NUMBER;
 
 // set up middleware
 app.use(express.static("public"));
@@ -120,7 +127,7 @@ async function getAccessToken() {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-      },
+      }
     );
     return response.data.access_token;
   } catch (error) {
@@ -141,7 +148,7 @@ async function sendCommand(value) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ value }),
-    },
+    }
   );
   if (!response.ok) {
     throw new Error("Failed to update property");
@@ -159,10 +166,6 @@ app.post("/command", checkAuth, async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
-
-// all the rest of the commands below are part of the API that allow me to create
-// an iphone shortcut/app and use the getURL contents to send commands to the
-// cloud; essentially this uses the curl command through terminal
 
 // emergency close route
 app.post("/emergency-close", checkAuth, async (req, res) => {
@@ -209,7 +212,7 @@ app.get("/status", checkAuth, async (req, res) => {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-      },
+      }
     );
     if (!response.ok) {
       throw new Error("Failed to get property status");
@@ -218,6 +221,27 @@ app.get("/status", checkAuth, async (req, res) => {
     res.status(200).json({ doorOpen: status.last_value });
   } catch (error) {
     console.error("Error fetching status:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// endpoint to ring doorbell
+app.post("/ring-doorbell", checkAuth, async (req, res) => {
+  const { message } = req.body;
+  const smsMessage =
+    message && message.trim() !== ""
+      ? message
+      : "Default doorbell ring: Someone rang your doorbell!";
+  try {
+    const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    await client.messages.create({
+      body: smsMessage,
+      from: TWILIO_FROM_NUMBER,
+      to: TWILIO_TO_NUMBER,
+    });
+    res.status(200).send("Doorbell rung successfully");
+  } catch (error) {
+    console.error("Error sending doorbell SMS:", error);
     res.status(500).send("Internal Server Error");
   }
 });

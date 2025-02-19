@@ -53,4 +53,23 @@ class DoorControlViewModel: ObservableObject {
             }
         }
     }
+    
+    // doorbell w custom msg
+    func ringDoorbell(customMessage: String? = nil) {
+        isLoading = true
+        let message = (customMessage != nil && !customMessage!.isEmpty)
+            ? customMessage!
+            : "Default doorbell ring: Someone rang your doorbell!"
+        NetworkManager.shared.ringDoorbell(message: message) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                switch result {
+                case .success():
+                    print("Doorbell rung successfully")
+                case .failure(let error):
+                    self?.errorMessage = AppError(message: error.localizedDescription)
+                }
+            }
+        }
+    }
 }

@@ -44,7 +44,6 @@
 		<string>remote-notification</string>
 		<string>fetch</string>
 		<string>nearby-interaction</string>
-		<string>processing</string>
 	</array>
 	<key>UISceneConfigurations</key>
 	<dict>

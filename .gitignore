@@ -1,7 +1,8 @@
 .idea
 .env
-node_modules
+*/node_modules
 out
 .DS_Store
 .gitattributes
 *.iml
+/node_modules

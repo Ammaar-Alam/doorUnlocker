@@ -216,4 +216,44 @@ class NetworkManager {
             completion(.success(()))
         }.resume()
     }
+    
+    // ringdoorbell func
+    func ringDoorbell(message: String, completion: @escaping (Result<Void, NetworkError>) -> Void) {
+        guard let url = URL(string: "\(APIConfig.baseURL)/ring-doorbell") else {
+            completion(.failure(.invalidURL))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        let body = ["message": message]
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if let token = getAuthToken() {
+            request.setValue(token, forHTTPHeaderField: "Authorization")
+        }
+        
+        do {
+            let bodyData = try JSONSerialization.data(withJSONObject: body, options: [])
+            request.httpBody = bodyData
+        } catch {
+            completion(.failure(.other(error)))
+            return
+        }
+        
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let error = error {
+                completion(.failure(.other(error)))
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  200..<300 ~= httpResponse.statusCode else {
+                completion(.failure(.invalidResponse))
+                return
+            }
+            
+            completion(.success(()))
+        }.resume()
+    }
 }

@@ -8,16 +8,17 @@ struct MyDormDoorApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(pendingShortcutAction: $pendingShortcutAction)
-                .environmentObject(doorViewModel)
-                .environmentObject(loginViewModel)
-                .onAppear {
-                    // If there was a shortcut action requested at launch, capture it now.
-                    if let action = SceneDelegate.requestedShortcutAction {
-                        pendingShortcutAction = action
-                        SceneDelegate.requestedShortcutAction = nil
+            NavigationView {
+                ContentView(pendingShortcutAction: $pendingShortcutAction)
+                    .environmentObject(doorViewModel)
+                    .environmentObject(loginViewModel)
+                    .onAppear {
+                        if let action = SceneDelegate.requestedShortcutAction {
+                            pendingShortcutAction = action
+                            SceneDelegate.requestedShortcutAction = nil
+                        }
                     }
-                }
+            }
         }
     }
 }

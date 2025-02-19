@@ -7,53 +7,72 @@ struct ContentView: View {
     @State private var animateShimmer = false
     @State private var showingLaunchMessage: Bool = false
     @State private var launchMessage: String = ""
+    @State private var doorbellMessage: String = ""
 
     @Binding var pendingShortcutAction: ShortcutActionType?
 
     var body: some View {
-        ZStack {
-            NetworkBackgroundView()
-                .ignoresSafeArea()
+        NavigationView {
+            ZStack {
+                NetworkBackgroundView()
+                    .ignoresSafeArea()
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 30) {
-                    if loginViewModel.isCheckingAuthStatus {
-                        LoadingView(message: "Checking Authorization...")
-                            .padding(.top, 50)
-                    } else {
-                        if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
-                            loginFormSection
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 30) {
+                        if loginViewModel.isCheckingAuthStatus {
+                            LoadingView(message: "Checking Authorization...")
+                                .padding(.top, 50)
                         } else {
-                            doorControlSection
+                            if loginViewModel.authRequired && !loginViewModel.isAuthenticated {
+                                loginFormSection
+                            } else {
+                                doorControlSection
+                            }
                         }
+                        
+                        // New doorbell section moved above the About section
+                        doorbellSection
+                        
+                        aboutSection
+                        connectSection
+                        
+                        NavigationLink(destination: PortfolioView()) {
+                            HStack {
+                                Image(systemName: "globe")
+                                Text("View My Portfolio")
+                                    .font(.headline)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(AppTheme.highlightGradient)
+                            .cornerRadius(10)
+                            .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
+                        }
+
+                        Spacer(minLength: 50)
                     }
-
-                    aboutSection
-                    connectSection
-
-                    Spacer(minLength: 50)
+                    .padding(.top, 50)
+                    .padding(.horizontal)
                 }
-                .padding(.top, 50)
-                .padding(.horizontal)
             }
-        }
-        .onAppear {
-            loginViewModel.checkAuthStatus()
-            animateShimmer = true
-        }
-        .onChange(of: loginViewModel.isAuthenticated) { isAuth in
-            if isAuth {
-                tryPerformShortcutAction()
+            .onAppear {
+                loginViewModel.checkAuthStatus()
+                animateShimmer = true
             }
-        }
-        .alert(isPresented: $showingLaunchMessage) {
-            Alert(title: Text("Shortcut Action"), message: Text(launchMessage), dismissButton: .default(Text("OK")))
-        }
-        .alert(item: $viewModel.errorMessage) { error in
-            Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
-        }
-        .alert(item: $loginViewModel.errorMessage) { error in
-            Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+            .onChange(of: loginViewModel.isAuthenticated) { isAuth in
+                if isAuth {
+                    tryPerformShortcutAction()
+                }
+            }
+            .alert(isPresented: $showingLaunchMessage) {
+                Alert(title: Text("Shortcut Action"), message: Text(launchMessage), dismissButton: .default(Text("OK")))
+            }
+            .alert(item: $viewModel.errorMessage) { error in
+                Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+            }
+            .alert(item: $loginViewModel.errorMessage) { error in
+                Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+            }
         }
     }
 
@@ -227,6 +246,39 @@ struct ContentView: View {
                 viewModel.fetchStatus()
             }
         }
+    }
+
+    // New doorbell section with updated TextField style
+    private var doorbellSection: some View {
+        VStack(alignment: .center, spacing: 20) {
+            shimmerTitle("Ring Doorbell")
+
+            TextField("Enter custom message (optional)", text: $doorbellMessage)
+                .padding(10)
+                .background(Color(hex: "#333333"))
+                .cornerRadius(8)
+                .foregroundColor(.white)
+                .padding(.horizontal)
+
+            Button(action: {
+                viewModel.ringDoorbell(customMessage: doorbellMessage)
+                doorbellMessage = ""
+            }) {
+                Text("Ring Doorbell")
+                    .font(.headline)
+                    .foregroundColor(AppTheme.background)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(AppTheme.primary)
+                    .cornerRadius(10)
+                    .shadow(color: AppTheme.primary.opacity(0.4), radius: 10)
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBg)
+        .cornerRadius(15)
+        .overlay(RoundedRectangle(cornerRadius: 15).stroke(AppTheme.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 8)
     }
 
     private var aboutSection: some View {
