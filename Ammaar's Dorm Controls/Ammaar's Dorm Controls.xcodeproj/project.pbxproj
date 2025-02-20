@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		67F9CDE12D66936E00D6FEE4 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 67F9CDE02D66936E00D6FEE4 /* SocketIO */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		67C97DF72D0542BE005E36E6 /* Ammaar's Dorm Controls.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ammaar's Dorm Controls.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				67F9CDE12D66936E00D6FEE4 /* SocketIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = "Ammaar's Dorm Controls";
 			packageProductDependencies = (
+				67F9CDE02D66936E00D6FEE4 /* SocketIO */,
 			);
 			productName = "Ammaar's Dorm Controls";
 			productReference = 67C97DF72D0542BE005E36E6 /* Ammaar's Dorm Controls.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 67C97DEE2D0542BE005E36E6;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				67F9CDDF2D66936E00D6FEE4 /* XCRemoteSwiftPackageReference "socket" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 67C97DF82D0542BE005E36E6 /* Products */;
 			projectDirPath = "";
@@ -359,6 +368,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		67F9CDDF2D66936E00D6FEE4 /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		67F9CDE02D66936E00D6FEE4 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 67F9CDDF2D66936E00D6FEE4 /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 67C97DEF2D0542BE005E36E6 /* Project object */;
 }
