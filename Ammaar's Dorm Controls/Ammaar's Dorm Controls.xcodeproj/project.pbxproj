@@ -11,7 +11,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		67C97DF72D0542BE005E36E6 /* Ammaar's Dorm Controls.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ammaar's Dorm Controls.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		67C97DF72D0542BE005E36E6 /* Ammaar Alam's Hub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ammaar Alam's Hub.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -45,7 +45,7 @@
 		67C97DF82D0542BE005E36E6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				67C97DF72D0542BE005E36E6 /* Ammaar's Dorm Controls.app */,
+				67C97DF72D0542BE005E36E6 /* Ammaar Alam's Hub.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,7 +73,7 @@
 				67F9CDE02D66936E00D6FEE4 /* SocketIO */,
 			);
 			productName = "Ammaar's Dorm Controls";
-			productReference = 67C97DF72D0542BE005E36E6 /* Ammaar's Dorm Controls.app */;
+			productReference = 67C97DF72D0542BE005E36E6 /* Ammaar Alam's Hub.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -266,7 +266,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Ammaar-s-Dorm-Controls-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Ammaar's Dorm Controls";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ammaar Alam's Hub";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -286,7 +286,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 15.1;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "AmmaarAlam.Ammaar-s-Dorm-Controls";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Ammaar Alam's Hub";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -314,7 +314,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Ammaar-s-Dorm-Controls-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Ammaar's Dorm Controls";
+				INFOPLIST_KEY_CFBundleDisplayName = "Ammaar Alam's Hub";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -334,7 +334,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 15.1;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "AmmaarAlam.Ammaar-s-Dorm-Controls";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Ammaar Alam's Hub";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
