@@ -26,7 +26,6 @@ document.addEventListener("DOMContentLoaded", function () {
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
         document.querySelector("#doorbell-section").style.display = "block";
-        // After successful login, fetch the current door status to sync UI.
         getDoorStatus();
       } else {
         document.getElementById("login-error").style.display = "block";
@@ -122,17 +121,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const openStatus = document.getElementById("open");
     const closedStatus = document.getElementById("closed");
 
-    // If switch is checked, door is considered open; otherwise closed
     if (doorSwitch.checked) {
-      openStatus.style.color = "rgba(255, 94, 85, 1)"; // solid red
-      closedStatus.style.color = "#888"; // default gray
+      openStatus.style.color = "rgba(255, 94, 85, 1)";
+      closedStatus.style.color = "#888";
     } else {
-      closedStatus.style.color = "rgba(76, 175, 80, 1)"; // solid green
-      openStatus.style.color = "#888"; // default gray
+      closedStatus.style.color = "rgba(76, 175, 80, 1)";
+      openStatus.style.color = "#888";
     }
   }
 
-  // handle user toggling the switch
   function toggleSwitch() {
     const doorSwitch = document.getElementById("doorSwitch");
     const command = doorSwitch.checked ? "open" : "close";
@@ -140,17 +137,14 @@ document.addEventListener("DOMContentLoaded", function () {
     updateStatus();
   }
 
-  // manual open door
   function manualOpen() {
     sendCommand("open");
   }
 
-  // manual close door
   function manualClose() {
     sendCommand("close");
   }
 
-  // Doorbell functionality
   function ringDoorbell() {
     const doorbellInput = document.getElementById("doorbellMessage");
     const message = doorbellInput.value || "Default doorbell ring: Someone rang your doorbell!";
@@ -185,7 +179,6 @@ document.addEventListener("DOMContentLoaded", function () {
     console.error("doorSwitch element not found");
   }
 
-  // new manual open/close buttons
   const openButton = document.getElementById("manualOpenButton");
   const closeButton = document.getElementById("manualCloseButton");
   if (openButton) {
@@ -195,9 +188,11 @@ document.addEventListener("DOMContentLoaded", function () {
     closeButton.onclick = manualClose;
   }
   
-  // event listener for doorbell button
   const ringDoorbellButton = document.getElementById("ringDoorbellButton");
   if (ringDoorbellButton) {
     ringDoorbellButton.onclick = ringDoorbell;
   }
+
+  // ensure doorbell section is always visible 
+  document.querySelector("#doorbell-section").style.display = "block";
 });

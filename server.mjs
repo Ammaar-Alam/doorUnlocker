@@ -4,7 +4,6 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import axios from "axios";
-import twilio from "twilio";
 
 // load env vars
 dotenv.config();
@@ -20,12 +19,9 @@ const SECRET_KEY = process.env.SECRET_KEY;
 const AUTH_REQUIRED = process.env.AUTH_REQUIRED === "true";
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-
-// twilio env vars
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER;
-const TWILIO_TO_NUMBER = process.env.TWILIO_TO_NUMBER;
+const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
+const INFOBIP_FROM_NUMBER = process.env.INFOBIP_FROM_NUMBER;
+const INFOBIP_TO_NUMBER = process.env.INFOBIP_TO_NUMBER;
 
 // set up middleware
 app.use(express.static("public"));
@@ -112,7 +108,7 @@ function checkAuth(req, res, next) {
   }
 }
 
-// get arduino iot cloud access token
+// get Arduino IoT Cloud access token
 async function getAccessToken() {
   try {
     const response = await axios.post(
@@ -136,7 +132,7 @@ async function getAccessToken() {
   }
 }
 
-// send command to arduino iot cloud
+// send command to Arduino IoT Cloud
 async function sendCommand(value) {
   const accessToken = await getAccessToken();
   const response = await fetch(
@@ -225,23 +221,42 @@ app.get("/status", checkAuth, async (req, res) => {
   }
 });
 
-// endpoint to ring doorbell
-app.post("/ring-doorbell", checkAuth, async (req, res) => {
+// --- Updated Doorbell Endpoint using Infobip ---
+// This endpoint is available even when authentication is required.
+app.post("/ring-doorbell", async (req, res) => {
   const { message } = req.body;
   const smsMessage =
     message && message.trim() !== ""
-      ? message
+      ? message.trim()
       : "Default doorbell ring: Someone rang your doorbell!";
+  console.log("Sending SMS with message:", smsMessage);
   try {
-    const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-    await client.messages.create({
-      body: smsMessage,
-      from: TWILIO_FROM_NUMBER,
-      to: TWILIO_TO_NUMBER,
-    });
+    const infobipResponse = await axios.post(
+      "https://ypj15p.api.infobip.com/sms/2/text/advanced",
+      {
+        messages: [
+          {
+            destinations: [{ to: INFOBIP_TO_NUMBER }],
+            from: INFOBIP_FROM_NUMBER,
+            text: smsMessage,
+          },
+        ],
+      },
+      {
+        headers: {
+          "Authorization": `App ${INFOBIP_API_KEY}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+      }
+    );
+    console.log("Infobip response:", infobipResponse.data);
     res.status(200).send("Doorbell rung successfully");
   } catch (error) {
-    console.error("Error sending doorbell SMS:", error);
+    console.error(
+      "Error sending doorbell SMS via Infobip:",
+      error.response ? error.response.data : error.message
+    );
     res.status(500).send("Internal Server Error");
   }
 });
