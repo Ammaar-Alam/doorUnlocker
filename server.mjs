@@ -28,7 +28,7 @@ app.use(express.static("public"));
 app.use(express.json());
 app.use(cookieParser());
 
-// trust first proxy
+// trust first proxy 
 app.set("trust proxy", 1);
 
 // session middleware config
