@@ -7,7 +7,7 @@ const int ENA = 9; // uses digital/pwn pins
 
 // LED pins
 #define RED_LED LED_GREEN  // correct pin values using nano esp32
-#define GREEN_LED LED_RED  //
+#define GREEN_LED LED_RED  // 
 
 // motor run duration in milliseconds
 const unsigned long motorRunTime = 2000;
@@ -15,7 +15,7 @@ const unsigned long motorRunTime = 2000;
 void setup() {
   Serial.begin(9600);
   // delay necessary to avoid program getting hung while waiting for serial w/o PC connection
-  delay(1500);
+  delay(1500); 
 
   // defined in thingProperties.h
   initProperties();

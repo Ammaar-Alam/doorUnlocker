@@ -8,3 +8,4 @@ out
 /node_modules
 */xcuserdata/*
 /Ammaar's Dorm Controls/**/xcuserdata/
+backend/proxyServer/node_modules/*

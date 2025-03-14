@@ -1,3 +1,5 @@
+// UPLOAD THIS SKETCH TO THE ARDUINO IF YOU WANNA USE BLE
+// (but ble is not as cool as wifi, although MUCH easier to set up)
 #include <NimBLEDevice.h>
 
 // BLE service and characteristic UUIDs
