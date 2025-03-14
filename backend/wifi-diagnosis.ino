@@ -3,7 +3,7 @@
 #include <ArduinoHttpClient.h>
 
 // Network credentials
-const char SSID[] = "puvisitor";
+const char SSID[] = "servicenet";
 const char PASS[] = ""; // No password for the network
 
 // Server details for login and data fetch
