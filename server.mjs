@@ -22,7 +22,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
 const INFOBIP_FROM_NUMBER = process.env.INFOBIP_FROM_NUMBER;
 const INFOBIP_TO_NUMBER = process.env.INFOBIP_TO_NUMBER;
-const INFOBIP_BASE_URL = (process.env.INFOBIP_BASE_URL || "https://ypj15p.api.infobip.com").replace(/\/$/, "");
+const INFOBIP_BASE_URL = ((process.env.INFOBIP_BASE_URL || "https://ypj15p.api.infobip.com").trim()).replace(/\/$/, "");
 
 // set up middleware
 app.use(express.static("public"));
