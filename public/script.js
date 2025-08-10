@@ -7,6 +7,34 @@ if (window.location.hostname !== 'localhost' && window.location.hostname !== '12
 
 document.addEventListener("DOMContentLoaded", function () {
   let authRequired = true; // assume auth is required by default
+  let sse;
+
+  function startEventStream() {
+    try {
+      if (sse) {
+        sse.close();
+      }
+      sse = new EventSource("/events");
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (typeof data.doorOpen === "boolean") {
+            setToggle(data.doorOpen);
+          }
+        } catch (e) {
+          console.warn("Bad SSE payload:", e);
+        }
+      };
+      sse.onerror = () => {
+        // The browser will auto-reconnect; log for debugging.
+        console.warn("SSE connection error; will retry automatically.");
+      };
+    } catch (e) {
+      console.warn("SSE unsupported or failed; falling back to polling.");
+      // fallback: periodic polling
+      setInterval(getDoorStatus, 4000);
+    }
+  }
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -26,6 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
         document.querySelector("#doorbell-section").style.display = "block";
+        startEventStream();
         getDoorStatus();
       } else {
         document.getElementById("login-error").style.display = "block";
@@ -48,6 +77,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.querySelector("#login-section").style.display = "none";
         document.querySelector(".control-panel").style.display = "block";
         document.querySelector("#doorbell-section").style.display = "block";
+        startEventStream();
         getDoorStatus();
       }
     })
@@ -109,8 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
       console.log(await response.text());
-      // Refresh door status after sending command so UI stays in sync
-      getDoorStatus();
+      // Do not immediately fetch; SSE will push the new state shortly
     } catch (error) {
       console.error("Error during the request:", error);
     }

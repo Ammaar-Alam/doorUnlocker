@@ -55,6 +55,80 @@ app.use((req, res, next) => {
 
 console.log("AUTH_REQUIRED:", AUTH_REQUIRED);
 
+// --- Real-time status broadcasting (SSE) ---
+const sseClients = new Set();
+let currentDoorOpen = null; // cache of last known door state
+
+function sseSend(res, data) {
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function broadcastStatus(doorOpen) {
+  for (const res of sseClients) {
+    try {
+      sseSend(res, { doorOpen });
+    } catch (e) {
+      // ignore broken connections; they'll be cleaned up on 'close'
+    }
+  }
+}
+
+async function fetchLatestDoorStatus() {
+  const accessToken = await getAccessToken();
+  const response = await fetch(
+    `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to get property status");
+  }
+  const status = await response.json();
+  return !!status.last_value;
+}
+
+// SSE endpoint
+app.get("/events", async (req, res) => {
+  if (AUTH_REQUIRED && !req.session?.authenticated) {
+    return res.status(403).end();
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  // Keep connection alive with comments
+  const keepAlive = setInterval(() => {
+    res.write(": keep-alive\n\n");
+  }, 25000);
+
+  // Register client
+  sseClients.add(res);
+
+  // Send initial status
+  try {
+    if (currentDoorOpen === null) {
+      currentDoorOpen = await fetchLatestDoorStatus();
+    }
+    sseSend(res, { doorOpen: currentDoorOpen });
+  } catch (e) {
+    // best-effort: don't terminate stream; client will rely on fallback
+    console.error("Initial SSE status fetch failed:", e.message);
+  }
+
+  req.on("close", () => {
+    clearInterval(keepAlive);
+    sseClients.delete(res);
+    try { res.end(); } catch {}
+  });
+});
+
 // check if auth is required
 app.get("/auth-status", (req, res) => {
   res.json({ authRequired: AUTH_REQUIRED });
@@ -156,6 +230,22 @@ app.post("/command", checkAuth, async (req, res) => {
   const { command } = req.body;
   try {
     await sendCommand(command === "open");
+    // Optimistically update and broadcast to connected clients
+    currentDoorOpen = command === "open";
+    broadcastStatus(currentDoorOpen);
+
+    // Verify against Arduino Cloud shortly after to avoid stale UI
+    setTimeout(async () => {
+      try {
+        const confirmed = await fetchLatestDoorStatus();
+        if (confirmed !== currentDoorOpen) {
+          currentDoorOpen = confirmed;
+          broadcastStatus(currentDoorOpen);
+        }
+      } catch (e) {
+        console.warn("Post-command verification failed:", e.message);
+      }
+    }, 1000);
     res.status(200).send("Command sent successfully");
   } catch (error) {
     console.error("Error sending command:", error);
@@ -199,22 +289,9 @@ app.post("/close", checkAuth, async (req, res) => {
 // get door status
 app.get("/status", checkAuth, async (req, res) => {
   try {
-    const accessToken = await getAccessToken();
-    const response = await fetch(
-      `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    if (!response.ok) {
-      throw new Error("Failed to get property status");
-    }
-    const status = await response.json();
-    res.status(200).json({ doorOpen: status.last_value });
+    const latest = await fetchLatestDoorStatus();
+    currentDoorOpen = latest;
+    res.status(200).json({ doorOpen: latest });
   } catch (error) {
     console.error("Error fetching status:", error);
     res.status(500).send("Internal Server Error");
@@ -269,3 +346,16 @@ const server = app.listen(port, () => {
 // increase timeouts to handle slow connections
 server.keepAliveTimeout = 61000;
 server.headersTimeout = 62000;
+
+// Periodically poll Arduino Cloud to capture out-of-band changes
+setInterval(async () => {
+  try {
+    const latest = await fetchLatestDoorStatus();
+    if (currentDoorOpen === null || latest !== currentDoorOpen) {
+      currentDoorOpen = latest;
+      broadcastStatus(currentDoorOpen);
+    }
+  } catch (e) {
+    console.warn("Background status poll failed:", e.message);
+  }
+}, 5000);
