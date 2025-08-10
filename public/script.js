@@ -182,22 +182,44 @@ document.addEventListener("DOMContentLoaded", function () {
     if (authRequired && token) {
       headers["Authorization"] = token;
     }
+    const btn = document.getElementById("ringDoorbellButton");
+    const feedback = document.getElementById("doorbell-feedback");
+    const setFeedback = (text, ok=true) => {
+      if (!feedback) return;
+      feedback.textContent = text;
+      feedback.style.display = "block";
+      feedback.style.color = ok ? "#4CAF50" : "#FF5E55";
+    };
+    btn.disabled = true;
+    const prevLabel = btn.textContent;
+    btn.textContent = "Sending...";
+
     fetch("/ring-doorbell", {
       method: "POST",
       headers: headers,
       body: JSON.stringify({ message: message })
     })
-    .then(response => {
-      if (response.ok) {
-        alert("Doorbell rung successfully!");
+    .then(async response => {
+      let data;
+      try { data = await response.json(); } catch { data = {}; }
+      if (response.ok && data.ok) {
+        setFeedback("Doorbell rung successfully!", true);
         doorbellInput.value = "";
       } else {
-        response.text().then(text => alert("Failed to ring doorbell: " + text));
+        const errMsg = data?.error || `Failed (${response.status})`;
+        setFeedback(errMsg, false);
       }
     })
     .catch(error => {
       console.error("Error sending doorbell request:", error);
-      alert("Error sending doorbell request.");
+      setFeedback("Network error sending doorbell.", false);
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = prevLabel;
+      setTimeout(() => {
+        if (feedback) feedback.style.display = "none";
+      }, 4000);
     });
   }
 

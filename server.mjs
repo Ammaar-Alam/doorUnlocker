@@ -22,6 +22,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
 const INFOBIP_FROM_NUMBER = process.env.INFOBIP_FROM_NUMBER;
 const INFOBIP_TO_NUMBER = process.env.INFOBIP_TO_NUMBER;
+const INFOBIP_BASE_URL = (process.env.INFOBIP_BASE_URL || "https://ypj15p.api.infobip.com").replace(/\/$/, "");
 
 // set up middleware
 app.use(express.static("public"));
@@ -308,18 +309,47 @@ app.get("/status", checkAuth, async (req, res) => {
   }
 });
 
-// --- Updated Doorbell Endpoint using Infobip ---
+// --- Doorbell Endpoint using Infobip (with validation and rate limiting) ---
 // This endpoint is available even when authentication is required.
+const doorbellIpLast = new Map();
+let doorbellGlobalEvents = [];
+
 app.post("/ring-doorbell", async (req, res) => {
-  const { message } = req.body;
-  const smsMessage =
-    message && message.trim() !== ""
-      ? message.trim()
-      : "Default doorbell ring: Someone rang your doorbell!";
-  console.log("Sending SMS with message:", smsMessage);
+  // Validate configuration
+  if (!INFOBIP_API_KEY || !INFOBIP_FROM_NUMBER || !INFOBIP_TO_NUMBER || !INFOBIP_BASE_URL) {
+    return res.status(503).json({
+      ok: false,
+      error: "Doorbell not configured",
+      detail: "Missing INFOBIP_* env vars (API key, numbers, or base URL)",
+    });
+  }
+
+  // Rate limit: 1 per 30s per IP and max 10 per 10 minutes globally
+  const now = Date.now();
+  const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
+  const last = doorbellIpLast.get(ip) || 0;
+  if (now - last < 30_000) {
+    return res.status(429).json({ ok: false, error: "Too many requests. Please wait a moment." });
+  }
+  // prune global window
+  doorbellGlobalEvents = doorbellGlobalEvents.filter((t) => now - t < 10 * 60_000);
+  if (doorbellGlobalEvents.length >= 10) {
+    return res.status(429).json({ ok: false, error: "Doorbell rate limited globally. Try again soon." });
+  }
+
+  // Sanitize message
+  const raw = (req.body?.message ?? "").toString();
+  let smsMessage = raw.trim();
+  if (!smsMessage) {
+    smsMessage = "Default doorbell ring: Someone rang your doorbell!";
+  }
+  smsMessage = smsMessage.replace(/[\r\n]+/g, " ").slice(0, 240);
+
+  console.log(`Sending doorbell SMS: ip=${ip}, len=${smsMessage.length}`);
   try {
+    const url = `${INFOBIP_BASE_URL}/sms/2/text/advanced`;
     const infobipResponse = await axios.post(
-      "https://ypj15p.api.infobip.com/sms/2/text/advanced",
+      url,
       {
         messages: [
           {
@@ -331,20 +361,27 @@ app.post("/ring-doorbell", async (req, res) => {
       },
       {
         headers: {
-          "Authorization": `App ${INFOBIP_API_KEY}`,
+          Authorization: `App ${INFOBIP_API_KEY}`,
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          Accept: "application/json",
         },
+        timeout: 10_000,
       }
     );
-    console.log("Infobip response:", infobipResponse.data);
-    res.status(200).send("Doorbell rung successfully");
+    // update rate-limit trackers only on success
+    doorbellIpLast.set(ip, now);
+    doorbellGlobalEvents.push(now);
+
+    console.log("Infobip response summary:", {
+      status: infobipResponse.status,
+      messagesCount: infobipResponse.data?.messages?.length,
+    });
+    return res.status(200).json({ ok: true, message: "Doorbell rung successfully" });
   } catch (error) {
-    console.error(
-      "Error sending doorbell SMS via Infobip:",
-      error.response ? error.response.data : error.message
-    );
-    res.status(500).send("Internal Server Error");
+    const status = error.response?.status || 500;
+    const detail = error.response?.data || error.message;
+    console.error("Error sending doorbell SMS via Infobip:", status, detail);
+    return res.status(502).json({ ok: false, error: "Failed to send SMS", detail });
   }
 });
 
