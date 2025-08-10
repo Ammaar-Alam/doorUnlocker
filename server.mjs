@@ -58,6 +58,7 @@ console.log("AUTH_REQUIRED:", AUTH_REQUIRED);
 // --- Real-time status broadcasting (SSE) ---
 const sseClients = new Set();
 let currentDoorOpen = null; // cache of last known door state
+let suppressContradictUntil = 0; // time until which contradictory updates are ignored
 
 function sseSend(res, data) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -234,18 +235,27 @@ app.post("/command", checkAuth, async (req, res) => {
     currentDoorOpen = command === "open";
     broadcastStatus(currentDoorOpen);
 
-    // Verify against Arduino Cloud shortly after to avoid stale UI
+    // After a command, ignore contradictory cloud reads for a short window
+    suppressContradictUntil = Date.now() + 2500; // 2.5s grace for cloud propagation
+
+    // Verify against Arduino Cloud after a short delay; require two mismatched reads
     setTimeout(async () => {
       try {
-        const confirmed = await fetchLatestDoorStatus();
-        if (confirmed !== currentDoorOpen) {
-          currentDoorOpen = confirmed;
-          broadcastStatus(currentDoorOpen);
+        const first = await fetchLatestDoorStatus();
+        if (first !== currentDoorOpen) {
+          // double-check to avoid transient flip
+          await new Promise((r) => setTimeout(r, 1000));
+          const second = await fetchLatestDoorStatus();
+          if (second !== currentDoorOpen) {
+            currentDoorOpen = second;
+            broadcastStatus(currentDoorOpen);
+            suppressContradictUntil = Date.now(); // clear suppression
+          }
         }
       } catch (e) {
         console.warn("Post-command verification failed:", e.message);
       }
-    }, 1000);
+    }, 2000);
     res.status(200).send("Command sent successfully");
   } catch (error) {
     console.error("Error sending command:", error);
@@ -351,7 +361,16 @@ server.headersTimeout = 62000;
 setInterval(async () => {
   try {
     const latest = await fetchLatestDoorStatus();
-    if (currentDoorOpen === null || latest !== currentDoorOpen) {
+    if (currentDoorOpen === null) {
+      currentDoorOpen = latest;
+      broadcastStatus(currentDoorOpen);
+      return;
+    }
+    if (latest !== currentDoorOpen) {
+      // Suppress brief contradictory updates during propagation window
+      if (Date.now() < suppressContradictUntil) {
+        return;
+      }
       currentDoorOpen = latest;
       broadcastStatus(currentDoorOpen);
     }
