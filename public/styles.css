@@ -158,8 +158,8 @@ footer p {
     justify-content: center; 
     grid-template-areas:
       "status status"
-      "login  about"
-      "doorbell about";
+      "doorbell about"
+      "login about";
   }
   .card-section { max-width: none; }
   .grid-status { grid-area: status; }
