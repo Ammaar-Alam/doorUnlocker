@@ -9,6 +9,31 @@ document.addEventListener("DOMContentLoaded", function () {
   let authRequired = true; // assume auth is required by default
   let sse;
 
+  function setControlsEnabled(enabled) {
+    const doorSwitch = document.getElementById("doorSwitch");
+    const openBtn = document.getElementById("manualOpenButton");
+    const closeBtn = document.getElementById("manualCloseButton");
+    [doorSwitch, openBtn, closeBtn].forEach(el => {
+      if (!el) return;
+      el.disabled = !enabled;
+      if (!enabled) {
+        el.setAttribute('aria-disabled', 'true');
+        el.tabIndex = -1;
+      } else {
+        el.removeAttribute('aria-disabled');
+        el.tabIndex = 0;
+      }
+    });
+  }
+
+  function updateLockUI(locked) {
+    const panel = document.querySelector('.control-panel');
+    const overlay = document.getElementById('controls-overlay');
+    if (panel) panel.classList.toggle('locked', !!locked);
+    if (overlay) overlay.style.display = locked ? 'flex' : 'none';
+    setControlsEnabled(!locked);
+  }
+
   function startEventStream() {
     try {
       if (sse) {
@@ -52,8 +77,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const data = await response.json();
         localStorage.setItem("authToken", data.token);
         document.querySelector("#login-section").style.display = "none";
-        document.querySelector(".control-panel").style.display = "block";
         document.querySelector("#doorbell-section").style.display = "block";
+        updateLockUI(false);
         startEventStream();
         getDoorStatus();
       } else {
@@ -67,18 +92,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.getElementById("login-form").addEventListener("submit", handleLogin);
 
+  // mobile nav toggle
+  const navToggle = document.querySelector('.nav-toggle');
+  const navLinks = document.querySelector('.nav-links');
+  if (navToggle && navLinks) {
+    const setExpanded = () => navToggle.setAttribute('aria-expanded', navLinks.classList.contains('open') ? 'true' : 'false');
+    navToggle.addEventListener('click', () => {
+      navLinks.classList.toggle('open');
+      setExpanded();
+    });
+    // close nav on outside click
+    document.addEventListener('click', (e) => {
+      if (!navLinks.contains(e.target) && !navToggle.contains(e.target)) {
+        navLinks.classList.remove('open');
+        setExpanded();
+      }
+    });
+    setExpanded();
+  }
+
   // check if authentication is required
   fetch("/auth-status")
     .then((response) => response.json())
     .then((data) => {
       authRequired = data.authRequired; // store the authRequired status
       if (!authRequired) {
-        // if auth isn't required, hide login and show control panel and doorbell section
+        // if auth isn't required, hide login and enable controls
         document.querySelector("#login-section").style.display = "none";
-        document.querySelector(".control-panel").style.display = "block";
         document.querySelector("#doorbell-section").style.display = "block";
+        updateLockUI(false);
         startEventStream();
         getDoorStatus();
+      } else {
+        // auth required: keep panel visible but locked
+        updateLockUI(true);
+        document.querySelector("#doorbell-section").style.display = "block";
       }
     })
     .catch((error) => console.error("Error checking auth status:", error));
