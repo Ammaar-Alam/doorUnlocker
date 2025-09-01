@@ -16,7 +16,9 @@ const thingId = process.env.THING_ID;
 const propertyId = process.env.PROPERTY_ID;
 const PASSWORD = process.env.PASSWORD;
 const SECRET_KEY = process.env.SECRET_KEY;
-const AUTH_REQUIRED = process.env.AUTH_REQUIRED === "true";
+// Mutable auth flag: defaults from env but can be toggled at runtime via admin endpoint
+let authRequired = process.env.AUTH_REQUIRED === "true";
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN; // secret required to toggle auth via admin endpoint
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
@@ -54,7 +56,8 @@ app.use((req, res, next) => {
   next();
 });
 
-console.log("AUTH_REQUIRED:", AUTH_REQUIRED);
+console.log("AUTH_REQUIRED:", authRequired);
+console.log("Admin toggle enabled:", ADMIN_TOKEN ? "yes" : "no");
 
 // --- Real-time status broadcasting (SSE) ---
 const sseClients = new Set();
@@ -96,7 +99,7 @@ async function fetchLatestDoorStatus() {
 
 // SSE endpoint
 app.get("/events", async (req, res) => {
-  if (AUTH_REQUIRED && !req.session?.authenticated) {
+  if (authRequired && !req.session?.authenticated) {
     return res.status(403).end();
   }
 
@@ -133,13 +136,13 @@ app.get("/events", async (req, res) => {
 
 // check if auth is required
 app.get("/auth-status", (req, res) => {
-  res.json({ authRequired: AUTH_REQUIRED });
+  res.json({ authRequired });
 });
 
 // login route
 app.post("/login", (req, res) => {
   const { password } = req.body;
-  if (!AUTH_REQUIRED || password === PASSWORD) {
+  if (!authRequired || password === PASSWORD) {
     req.session.authenticated = true;
     req.session.save((err) => {
       if (err) {
@@ -160,7 +163,7 @@ app.post("/login", (req, res) => {
 
 // auth middleware
 function checkAuth(req, res, next) {
-  if (!AUTH_REQUIRED) {
+  if (!authRequired) {
     return next();
   }
 
@@ -383,6 +386,20 @@ app.post("/ring-doorbell", async (req, res) => {
     console.error("Error sending doorbell SMS via Infobip:", status, detail);
     return res.status(502).json({ ok: false, error: "Failed to send SMS", detail });
   }
+});
+
+// --- Admin endpoint to toggle authRequired at runtime ---
+app.post("/admin/set-auth-required", (req, res) => {
+  const headerAuth = req.headers["authorization"] || "";
+  const bearer = headerAuth.startsWith("Bearer ") ? headerAuth.slice(7) : null;
+  const token = req.headers["x-admin-token"] || bearer;
+  if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) {
+    return res.status(403).json({ ok: false, error: "Forbidden" });
+  }
+  const enabled = req.body && typeof req.body.enabled !== "undefined" ? !!req.body.enabled : true;
+  authRequired = enabled;
+  console.log("Auth required set to:", authRequired);
+  res.json({ ok: true, authRequired });
 });
 
 // start server

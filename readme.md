@@ -81,6 +81,16 @@ The system can be configured using environment variables. Key configuration opti
 - `PASSWORD`: Set the password for accessing the control panel (if auth is enabled)
 - `PORT`: The port on which the server will run (default: 3000)
 
+### Auto‑Enable Password at Midnight (ET)
+
+This repo includes a GitHub Actions workflow that flips password protection on every midnight in New York time (handles DST by running at 04:00/05:00 UTC).
+
+- Server env var: set `ADMIN_TOKEN` (a strong random string) in your deployment environment.
+- GitHub secret: add `AUTH_ADMIN_TOKEN` with the exact same value in the repo’s GitHub Secrets.
+- The workflow file is at `.github/workflows/midnight-auth.yml` and calls `POST /admin/set-auth-required` with `{ "enabled": true }`.
+  - Endpoint expects header `X-Admin-Token: <ADMIN_TOKEN>` or `Authorization: Bearer <ADMIN_TOKEN>`.
+  - You can trigger it manually via “Run workflow” in Actions.
+
 For a full list of configuration options, see the `.env.example` file.
 
 ## API Endpoints

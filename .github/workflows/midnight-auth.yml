@@ -1,0 +1,26 @@
+name: Require Password at Midnight (ET)
+
+on:
+  schedule:
+    # Run at 12AM EDT daily (UTC-4)
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  toggle-auth:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_URL: https://door.ammaar.xyz/admin/set-auth-required
+    steps:
+      - name: Set authRequired=true via admin endpoint
+        run: |
+          for i in 1 2 3; do
+            curl --fail-with-body -sS -X POST \
+              -H "Content-Type: application/json" \
+              -H "X-Admin-Token: ${{ secrets.AUTH_ADMIN_TOKEN }}" \
+              --data '{"enabled": true}' \
+              "$TARGET_URL" && break || sleep 10;
+          done
+      - name: Confirm done
+        run: echo "Midnight auth toggle invoked."
+
