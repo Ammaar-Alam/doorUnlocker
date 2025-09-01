@@ -339,11 +339,11 @@ input:checked + .slider:before {
 .switch input:disabled + .slider { opacity: 0.6; }
 
 .open-btn {
-  background-color: #4caf50;
+  background-color: #ff5e55;
 }
 
 .close-btn {
-  background-color: #ff5e55;
+  background-color: #4caf50;
 }
 
 /* Note / small text styling */
