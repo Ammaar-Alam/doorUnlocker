@@ -237,7 +237,7 @@ app.post("/command", checkAuth, async (req, res) => {
     broadcastStatus(currentDoorOpen);
 
     // After a command, ignore contradictory cloud reads for a short window
-    suppressContradictUntil = Date.now() + 1500; // 1500ms grace for cloud propagation
+    suppressContradictUntil = Date.now() + 1000; // 1000ms grace for cloud propagation
 
     // Verify against Arduino Cloud after a short delay; require two mismatched reads
     setTimeout(async () => {
@@ -245,7 +245,7 @@ app.post("/command", checkAuth, async (req, res) => {
         const first = await fetchLatestDoorStatus();
         if (first !== currentDoorOpen) {
           // double-check to avoid transient flip
-          await new Promise((r) => setTimeout(r, 1000));
+          await new Promise((r) => setTimeout(r, 2500));
           const second = await fetchLatestDoorStatus();
           if (second !== currentDoorOpen) {
             currentDoorOpen = second;
