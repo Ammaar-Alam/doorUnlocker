@@ -18,7 +18,8 @@ const PASSWORD = process.env.PASSWORD;
 const SECRET_KEY = process.env.SECRET_KEY;
 // Mutable auth flag: defaults from env but can be toggled at runtime via admin endpoint
 let authRequired = process.env.AUTH_REQUIRED === "true";
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN; // secret required to toggle auth via admin endpoint
+// secret required to toggle auth via admin endpoint
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || process.env.AUTH_ADMIN_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
