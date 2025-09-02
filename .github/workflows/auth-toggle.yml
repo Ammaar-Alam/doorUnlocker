@@ -34,10 +34,14 @@ jobs:
               *) echo "::error::Invalid action: ${{ github.event.inputs.action }}"; exit 1 ;;
             esac
           elif [ "${{ github.event_name }}" = "schedule" ]; then
-            case "${{ github.event.schedule }}" in
+            SCHED="${{ github.event.schedule }}"
+            if [ -z "$SCHED" ] && [ -f "$GITHUB_EVENT_PATH" ]; then
+              SCHED=$(jq -r '.schedule // empty' "$GITHUB_EVENT_PATH" || true)
+            fi
+            case "$SCHED" in
               "0 4 * * *") echo "enabled=true" >> "$GITHUB_OUTPUT" ;;
               "0 12 * * *") echo "enabled=false" >> "$GITHUB_OUTPUT" ;;
-              *) echo "::error::Unknown schedule: ${{ github.event.schedule }}"; exit 1 ;;
+              *) echo "::error::Unknown schedule: ${SCHED}"; exit 1 ;;
             esac
           else
             echo "::error::Unsupported trigger: ${{ github.event_name }}"; exit 1
