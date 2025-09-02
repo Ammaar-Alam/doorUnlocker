@@ -83,14 +83,14 @@ The system can be configured using environment variables. Key configuration opti
 
 ### Auto‑Toggle Password (Midnight ON, 8AM OFF)
 
-This repo includes GitHub Actions workflows that toggle password protection on a daily schedule in New York time and cover DST by scheduling both UTC offsets:
+This repo includes a single GitHub Actions workflow that toggles password protection on a daily schedule in New York time (EDT) and supports manual toggling from the UI:
 
 - Server env var: set `ADMIN_TOKEN` (a strong random string) in your deployment environment.
 - GitHub secret: add `AUTH_ADMIN_TOKEN` with the exact same value in the repo’s GitHub Secrets.
-- Enable at midnight ET: `.github/workflows/midnight-auth.yml` runs at 04:00/05:00 UTC and calls `POST /admin/set-auth-required` with `{ "enabled": true }`.
-- Disable at 8AM ET: `.github/workflows/morning-auth-off.yml` runs at 12:00/13:00 UTC and calls the same endpoint with `{ "enabled": false }`.
+- Workflow: `.github/workflows/auth-toggle.yml`
+  - Scheduled runs: 12:00 AM EDT (04:00 UTC) sets `enabled: true`; 8:00 AM EDT (12:00 UTC) sets `enabled: false`.
+  - Manual runs: Use “Run workflow” and choose `action = enable` or `disable`.
   - Endpoint accepts either header `X-Admin-Token: <ADMIN_TOKEN>` or `Authorization: Bearer <ADMIN_TOKEN>`.
-  - You can trigger both manually via “Run workflow” in Actions.
 
 For a full list of configuration options, see the `.env.example` file.
 

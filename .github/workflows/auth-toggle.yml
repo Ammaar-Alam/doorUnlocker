@@ -1,0 +1,72 @@
+name: Password Toggle (EDT + manual)
+
+on:
+  schedule:
+    # 12:00 AM EDT (UTC-4)
+    - cron: "0 4 * * *"
+    # 08:00 AM EDT (UTC-4)
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Enable or disable password"
+        type: choice
+        required: true
+        options:
+          - enable
+          - disable
+
+jobs:
+  toggle-auth:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_URL: https://door.ammaar.xyz/admin/set-auth-required
+      STATUS_URL: https://door.ammaar.xyz/auth-status
+    steps:
+      - name: Decide desired state
+        id: decide
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ github.event.inputs.action }}" in
+              enable) echo "enabled=true" >> "$GITHUB_OUTPUT" ;;
+              disable) echo "enabled=false" >> "$GITHUB_OUTPUT" ;;
+              *) echo "::error::Invalid action: ${{ github.event.inputs.action }}"; exit 1 ;;
+            esac
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            case "${{ github.event.schedule }}" in
+              "0 4 * * *") echo "enabled=true" >> "$GITHUB_OUTPUT" ;;
+              "0 12 * * *") echo "enabled=false" >> "$GITHUB_OUTPUT" ;;
+              *) echo "::error::Unknown schedule: ${{ github.event.schedule }}"; exit 1 ;;
+            esac
+          else
+            echo "::error::Unsupported trigger: ${{ github.event_name }}"; exit 1
+          fi
+          echo "Will set authRequired to: ${{ steps.decide.outputs.enabled }}"
+
+      - name: Toggle authRequired via admin endpoint
+        env:
+          ENABLED: ${{ steps.decide.outputs.enabled }}
+        run: |
+          JSON_PAYLOAD="{\"enabled\": ${ENABLED}}"
+          for i in 1 2 3; do
+            curl --fail-with-body -sS -X POST \
+              -H "Content-Type: application/json" \
+              -H "X-Admin-Token: ${{ secrets.AUTH_ADMIN_TOKEN }}" \
+              -H "Authorization: Bearer ${{ secrets.AUTH_ADMIN_TOKEN }}" \
+              --data "$JSON_PAYLOAD" \
+              "$TARGET_URL" && break || sleep 10;
+          done
+
+      - name: Verify desired state
+        env:
+          EXPECTED: ${{ steps.decide.outputs.enabled }}
+        run: |
+          body=$(curl -sS "$STATUS_URL")
+          echo "Status response: $body"
+          val=$(jq -r '.authRequired' <<<"$body")
+          if [ "$val" != "$EXPECTED" ]; then
+            echo "::error::Expected authRequired=$EXPECTED but got: $val"
+            exit 1
+          fi
+          echo "Auth requirement set to $val as expected."
