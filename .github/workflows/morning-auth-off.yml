@@ -1,35 +1,36 @@
-name: Require Password at Midnight (ET)
+name: Disable Password at 8AM (ET)
 
 on:
   schedule:
-    # Run at 12AM ET daily
-    - cron: "0 4 * * *"   # 12:00 AM EDT (UTC-4)
+    # Run at 8AM ET daily. Cover DST by running at both UTC-4 and UTC-5
+    - cron: "0 12 * * *"  # 08:00 AM EDT (UTC-4)
+    - cron: "0 13 * * *"  # 08:00 AM EST (UTC-5)
   workflow_dispatch: {}
 
 jobs:
-  toggle-auth:
+  toggle-auth-off:
     runs-on: ubuntu-latest
     env:
       TARGET_URL: https://door.ammaar.xyz/admin/set-auth-required
       STATUS_URL: https://door.ammaar.xyz/auth-status
     steps:
-      - name: Set authRequired=true via admin endpoint
+      - name: Set authRequired=false via admin endpoint
         run: |
           for i in 1 2 3; do
             curl --fail-with-body -sS -X POST \
               -H "Content-Type: application/json" \
               -H "X-Admin-Token: ${{ secrets.AUTH_ADMIN_TOKEN }}" \
               -H "Authorization: Bearer ${{ secrets.AUTH_ADMIN_TOKEN }}" \
-              --data '{"enabled": true}' \
+              --data '{"enabled": false}' \
               "$TARGET_URL" && break || sleep 10;
           done
-      - name: Verify authRequired is true
+      - name: Verify authRequired is false
         run: |
           body=$(curl -sS "$STATUS_URL")
           echo "Status response: $body"
           val=$(jq -r '.authRequired' <<<"$body")
-          if [ "$val" != "true" ]; then
-            echo "::error::Expected authRequired=true but got: $val"
+          if [ "$val" != "false" ]; then
+            echo "::error::Expected authRequired=false but got: $val"
             exit 1
           fi
-          echo "Auth requirement successfully enabled."
+          echo "Auth requirement successfully disabled."

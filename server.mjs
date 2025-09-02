@@ -390,10 +390,11 @@ app.post("/ring-doorbell", async (req, res) => {
 
 // --- Admin endpoint to toggle authRequired at runtime ---
 app.post("/admin/set-auth-required", (req, res) => {
-  const headerAuth = req.headers["authorization"] || "";
-  const bearer = headerAuth.startsWith("Bearer ") ? headerAuth.slice(7) : null;
-  const token = req.headers["x-admin-token"] || bearer;
-  if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) {
+  const headerAuth = (req.headers["authorization"] || "").toString();
+  const bearer = headerAuth.startsWith("Bearer ") ? headerAuth.slice(7) : "";
+  const provided = (req.headers["x-admin-token"] || bearer || "").toString().trim();
+  const expected = (ADMIN_TOKEN || "").toString().trim();
+  if (!expected || provided !== expected) {
     return res.status(403).json({ ok: false, error: "Forbidden" });
   }
   const enabled = req.body && typeof req.body.enabled !== "undefined" ? !!req.body.enabled : true;
