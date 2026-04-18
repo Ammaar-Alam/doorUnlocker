@@ -1,9 +1,10 @@
 import express from "express";
-import session from "express-session";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import axios from "axios";
+import crypto from "node:crypto";
+import jwt from "jsonwebtoken";
 
 // load env vars
 dotenv.config();
@@ -15,17 +16,24 @@ const port = process.env.PORT || 3000;
 const thingId = process.env.THING_ID;
 const propertyId = process.env.PROPERTY_ID;
 const PASSWORD = process.env.PASSWORD;
-const SECRET_KEY = process.env.SECRET_KEY;
+const SECRET_KEY = process.env.SECRET_KEY || process.env.JWT_SECRET;
+const AUTH_TOKEN_TTL_SECONDS = Number.parseInt(process.env.AUTH_TOKEN_TTL_SECONDS || "86400", 10);
+const ARDUINO_HTTP_TIMEOUT_MS = Number.parseInt(process.env.ARDUINO_HTTP_TIMEOUT_MS || "10000", 10);
+const STATUS_POLL_INTERVAL_MS = Number.parseInt(process.env.STATUS_POLL_INTERVAL_MS || "5000", 10);
+const COMMAND_SETTLE_MS = Number.parseInt(process.env.COMMAND_SETTLE_MS || "6000", 10);
 // Mutable auth flag: defaults from env but can be toggled at runtime via admin endpoint
 let authRequired = process.env.AUTH_REQUIRED === "true";
 // secret required to toggle auth via admin endpoint
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || process.env.AUTH_ADMIN_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
-const INFOBIP_FROM_NUMBER = process.env.INFOBIP_FROM_NUMBER;
-const INFOBIP_TO_NUMBER = process.env.INFOBIP_TO_NUMBER;
-const INFOBIP_BASE_URL = ((process.env.INFOBIP_BASE_URL || "https://ypj15p.api.infobip.com").trim()).replace(/\/$/, "");
+// ntfy configuration (used for doorbell notifications)
+const NTFY_URL = (process.env.NTFY_URL || "https://ntfy.sh").replace(/\/$/, "");
+const NTFY_TOPIC = process.env.NTFY_TOPIC;
+const authSecret = SECRET_KEY || crypto.randomBytes(32).toString("hex");
+if (!SECRET_KEY) {
+  console.warn("SECRET_KEY/JWT_SECRET is not set. Using ephemeral auth secret for this dyno.");
+}
 
 // set up middleware
 app.use(express.static("public"));
@@ -35,30 +43,30 @@ app.use(cookieParser());
 // trust first proxy 
 app.set("trust proxy", 1);
 
-// session middleware config
-const sessionMiddleware = session({
-  secret: SECRET_KEY,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  },
-});
-
-app.use(sessionMiddleware);
-
-// log session info for debugging
-app.use((req, res, next) => {
-  console.log(`Session ID: ${req.sessionID}`);
-  console.log(`Session: ${JSON.stringify(req.session)}`);
-  next();
-});
-
 console.log("AUTH_REQUIRED:", authRequired);
 console.log("Admin toggle enabled:", ADMIN_TOKEN ? "yes" : "no");
+
+function extractAuthToken(req) {
+  const header = (req.headers["authorization"] || "").toString().trim();
+  if (header.toLowerCase().startsWith("bearer ")) {
+    return header.slice(7).trim();
+  }
+  if (header) {
+    return header;
+  }
+  return (req.cookies?.authToken || "").toString().trim();
+}
+
+function verifyAuthToken(token) {
+  if (!token) {
+    return null;
+  }
+  try {
+    return jwt.verify(token, authSecret);
+  } catch {
+    return null;
+  }
+}
 
 // --- Real-time status broadcasting (SSE) ---
 const sseClients = new Set();
@@ -79,9 +87,74 @@ function broadcastStatus(doorOpen) {
   }
 }
 
+function hasSuppressedDoorState() {
+  return currentDoorOpen !== null && Date.now() < suppressContradictUntil;
+}
+
+async function getVisibleDoorStatus() {
+  if (hasSuppressedDoorState()) {
+    return currentDoorOpen;
+  }
+  const latest = await fetchLatestDoorStatus();
+  currentDoorOpen = latest;
+  return latest;
+}
+
+function applyOptimisticDoorState(doorOpen) {
+  currentDoorOpen = !!doorOpen;
+  suppressContradictUntil = Date.now() + COMMAND_SETTLE_MS;
+  broadcastStatus(currentDoorOpen);
+}
+
+function scheduleDoorStateVerification(expectedDoorOpen) {
+  setTimeout(async () => {
+    try {
+      const first = await fetchLatestDoorStatus();
+      if (first === expectedDoorOpen) {
+        currentDoorOpen = first;
+        suppressContradictUntil = 0;
+        return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      const second = await fetchLatestDoorStatus();
+      currentDoorOpen = second;
+      suppressContradictUntil = 0;
+
+      if (second !== expectedDoorOpen) {
+        broadcastStatus(currentDoorOpen);
+      }
+    } catch (e) {
+      console.warn("Post-command verification failed:", e.message);
+    }
+  }, 2000);
+}
+
+let cachedAccessToken = null;
+let cachedAccessTokenExpiry = 0;
+let accessTokenInFlight = null;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = ARDUINO_HTTP_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`Request timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchLatestDoorStatus() {
   const accessToken = await getAccessToken();
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}`,
     {
       method: "GET",
@@ -92,7 +165,7 @@ async function fetchLatestDoorStatus() {
     }
   );
   if (!response.ok) {
-    throw new Error("Failed to get property status");
+    throw new Error(`Failed to get property status: ${response.status}`);
   }
   const status = await response.json();
   return !!status.last_value;
@@ -100,8 +173,11 @@ async function fetchLatestDoorStatus() {
 
 // SSE endpoint
 app.get("/events", async (req, res) => {
-  if (authRequired && !req.session?.authenticated) {
-    return res.status(403).end();
+  if (authRequired) {
+    const payload = verifyAuthToken(extractAuthToken(req));
+    if (!payload?.authenticated) {
+      return res.status(403).end();
+    }
   }
 
   res.setHeader("Content-Type", "text/event-stream");
@@ -144,18 +220,20 @@ app.get("/auth-status", (req, res) => {
 app.post("/login", (req, res) => {
   const { password } = req.body;
   if (!authRequired || password === PASSWORD) {
-    req.session.authenticated = true;
-    req.session.save((err) => {
-      if (err) {
-        console.error("Session save error:", err);
-        res.status(500).json({ message: "Internal Server Error" });
-      } else {
-        console.log("Login successful, session ID:", req.sessionID);
-        res.status(200).json({
-          message: "Login successful",
-          token: req.sessionID,
-        });
-      }
+    const token = jwt.sign(
+      { authenticated: true },
+      authSecret,
+      { expiresIn: AUTH_TOKEN_TTL_SECONDS }
+    );
+    res.cookie("authToken", token, {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: AUTH_TOKEN_TTL_SECONDS * 1000,
+    });
+    res.status(200).json({
+      message: "Login successful",
+      token,
     });
   } else {
     res.status(401).json({ message: "Invalid password" });
@@ -168,54 +246,71 @@ function checkAuth(req, res, next) {
     return next();
   }
 
-  const token = req.headers["authorization"];
-  if (token) {
-    req.sessionStore.get(token, (err, sessionData) => {
-      if (err) {
-        console.error("Session retrieval error:", err);
-        return res.status(500).json({ message: "Internal Server Error" });
-      }
-      if (sessionData && sessionData.authenticated) {
-        req.session.authenticated = sessionData.authenticated;
-        req.sessionID = token;
-        return next();
-      } else {
-        return res.status(403).json({ message: "Not authenticated" });
-      }
-    });
-  } else {
-    res.status(403).json({ message: "No token provided" });
+  const token = extractAuthToken(req);
+  if (!token) {
+    return res.status(403).json({ message: "No token provided" });
   }
+  const payload = verifyAuthToken(token);
+  if (!payload?.authenticated) {
+    return res.status(403).json({ message: "Not authenticated" });
+  }
+  req.auth = payload;
+  next();
 }
 
 // get Arduino IoT Cloud access token
 async function getAccessToken() {
-  try {
-    const response = await axios.post(
-      "https://api2.arduino.cc/iot/v1/clients/token",
-      new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        audience: "https://api2.arduino.cc/iot",
-      }),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
-    return response.data.access_token;
-  } catch (error) {
-    console.error("Error getting access token:", error);
-    throw error;
+  if (cachedAccessToken && Date.now() < cachedAccessTokenExpiry) {
+    return cachedAccessToken;
   }
+
+  if (accessTokenInFlight) {
+    return accessTokenInFlight;
+  }
+
+  accessTokenInFlight = (async () => {
+    try {
+      const response = await axios.post(
+        "https://api2.arduino.cc/iot/v1/clients/token",
+        new URLSearchParams({
+          grant_type: "client_credentials",
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          audience: "https://api2.arduino.cc/iot",
+        }),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          timeout: ARDUINO_HTTP_TIMEOUT_MS,
+        }
+      );
+      const token = response.data?.access_token;
+      if (!token) {
+        throw new Error("Arduino token response missing access_token");
+      }
+      const expiresInSeconds = Number(response.data?.expires_in);
+      const ttlMs = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
+        ? expiresInSeconds * 1000
+        : 3600 * 1000;
+      cachedAccessToken = token;
+      cachedAccessTokenExpiry = Date.now() + Math.max(5000, ttlMs - 30000);
+      return cachedAccessToken;
+    } catch (error) {
+      console.error("Error getting access token:", error.message || error);
+      throw error;
+    } finally {
+      accessTokenInFlight = null;
+    }
+  })();
+
+  return accessTokenInFlight;
 }
 
 // send command to Arduino IoT Cloud
 async function sendCommand(value) {
   const accessToken = await getAccessToken();
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
     {
       method: "PUT",
@@ -227,104 +322,73 @@ async function sendCommand(value) {
     }
   );
   if (!response.ok) {
-    throw new Error("Failed to update property");
+    throw new Error(`Failed to update property: ${response.status}`);
+  }
+}
+
+async function handleDoorCommandRequest(res, nextDoorOpen, successMessage) {
+  try {
+    await sendCommand(nextDoorOpen);
+    applyOptimisticDoorState(nextDoorOpen);
+    scheduleDoorStateVerification(nextDoorOpen);
+    res.status(200).send(successMessage);
+  } catch (error) {
+    console.error("Error sending command:", error);
+    res.status(500).send("Internal Server Error");
   }
 }
 
 // handle door commands
 app.post("/command", checkAuth, async (req, res) => {
   const { command } = req.body;
-  try {
-    await sendCommand(command === "open");
-    // Optimistically update and broadcast to connected clients
-    currentDoorOpen = command === "open";
-    broadcastStatus(currentDoorOpen);
-
-    // After a command, ignore contradictory cloud reads for a short window
-    suppressContradictUntil = Date.now() + 1000; // 1000ms grace for cloud propagation
-
-    // Verify against Arduino Cloud after a short delay; require two mismatched reads
-    setTimeout(async () => {
-      try {
-        const first = await fetchLatestDoorStatus();
-        if (first !== currentDoorOpen) {
-          // double-check to avoid transient flip
-          await new Promise((r) => setTimeout(r, 2500));
-          const second = await fetchLatestDoorStatus();
-          if (second !== currentDoorOpen) {
-            currentDoorOpen = second;
-            broadcastStatus(currentDoorOpen);
-            suppressContradictUntil = Date.now(); // clear suppression
-          }
-        }
-      } catch (e) {
-        console.warn("Post-command verification failed:", e.message);
-      }
-    }, 2000);
-    res.status(200).send("Command sent successfully");
-  } catch (error) {
-    console.error("Error sending command:", error);
-    res.status(500).send("Internal Server Error");
+  if (command !== "open" && command !== "close") {
+    return res.status(400).json({ message: "Command must be 'open' or 'close'" });
   }
+  return handleDoorCommandRequest(
+    res,
+    command === "open",
+    "Command sent successfully"
+  );
 });
 
 // emergency close route
 app.post("/emergency-close", checkAuth, async (req, res) => {
-  try {
-    await sendCommand(false);
-    res.status(200).send("Emergency close command sent successfully");
-  } catch (error) {
-    console.error("Error sending emergency close command:", error);
-    res.status(500).send("Internal Server Error");
-  }
+  return handleDoorCommandRequest(res, false, "Emergency close command sent successfully");
 });
 
 // open door route
 app.post("/open", checkAuth, async (req, res) => {
-  try {
-    await sendCommand(true);
-    res.status(200).send("Open command sent successfully");
-  } catch (error) {
-    console.error("Error sending open command:", error);
-    res.status(500).send("Internal Server Error");
-  }
+  return handleDoorCommandRequest(res, true, "Open command sent successfully");
 });
 
 // close door route
 app.post("/close", checkAuth, async (req, res) => {
-  try {
-    await sendCommand(false);
-    res.status(200).send("Close command sent successfully");
-  } catch (error) {
-    console.error("Error sending close command:", error);
-    res.status(500).send("Internal Server Error");
-  }
+  return handleDoorCommandRequest(res, false, "Close command sent successfully");
 });
 
 // get door status
 app.get("/status", checkAuth, async (req, res) => {
   try {
-    const latest = await fetchLatestDoorStatus();
-    currentDoorOpen = latest;
-    res.status(200).json({ doorOpen: latest });
+    const doorOpen = await getVisibleDoorStatus();
+    res.status(200).json({ doorOpen });
   } catch (error) {
     console.error("Error fetching status:", error);
     res.status(500).send("Internal Server Error");
   }
 });
 
-// --- Doorbell Endpoint using Infobip (with validation and rate limiting) ---
+// --- Doorbell Endpoint using ntfy (with validation and rate limiting) ---
 // This endpoint is available even when authentication is required.
 const doorbellIpLast = new Map();
 let doorbellGlobalEvents = [];
 
 app.post("/ring-doorbell", async (req, res) => {
   // Validate configuration
-  if (!INFOBIP_API_KEY || !INFOBIP_FROM_NUMBER || !INFOBIP_TO_NUMBER || !INFOBIP_BASE_URL) {
+  if (!NTFY_TOPIC) {
     return res.status(503).json({
       ok: false,
       error: "Doorbell not configured",
-      detail: "Missing INFOBIP_* env vars (API key, numbers, or base URL)",
+      detail: "Missing NTFY_TOPIC env var (and optional NTFY_URL)",
     });
   }
 
@@ -343,31 +407,24 @@ app.post("/ring-doorbell", async (req, res) => {
 
   // Sanitize message
   const raw = (req.body?.message ?? "").toString();
-  let smsMessage = raw.trim();
-  if (!smsMessage) {
-    smsMessage = "Default doorbell ring: Someone rang your doorbell!";
+  let bellMessage = raw.trim();
+  if (!bellMessage) {
+    bellMessage = "Default doorbell ring: Someone rang your doorbell!";
   }
-  smsMessage = smsMessage.replace(/[\r\n]+/g, " ").slice(0, 240);
+  bellMessage = bellMessage.replace(/[\r\n]+/g, " ").slice(0, 500);
 
-  console.log(`Sending doorbell SMS: ip=${ip}, len=${smsMessage.length}`);
+  console.log(`Sending doorbell notification via ntfy: ip=${ip}, len=${bellMessage.length}`);
   try {
-    const url = `${INFOBIP_BASE_URL}/sms/2/text/advanced`;
-    const infobipResponse = await axios.post(
+    const url = `${NTFY_URL}/${NTFY_TOPIC}`;
+    const ntfyResponse = await axios.post(
       url,
-      {
-        messages: [
-          {
-            destinations: [{ to: INFOBIP_TO_NUMBER }],
-            from: INFOBIP_FROM_NUMBER,
-            text: smsMessage,
-          },
-        ],
-      },
+      bellMessage,
       {
         headers: {
-          Authorization: `App ${INFOBIP_API_KEY}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
+          // Mirroring princeton-course-notifier: Title/Priority headers
+          Title: "Doorbell",
+          Priority: "high",
+          "Content-Type": "text/plain",
         },
         timeout: 10_000,
       }
@@ -376,16 +433,15 @@ app.post("/ring-doorbell", async (req, res) => {
     doorbellIpLast.set(ip, now);
     doorbellGlobalEvents.push(now);
 
-    console.log("Infobip response summary:", {
-      status: infobipResponse.status,
-      messagesCount: infobipResponse.data?.messages?.length,
+    console.log("ntfy response summary:", {
+      status: ntfyResponse.status,
     });
     return res.status(200).json({ ok: true, message: "Doorbell rung successfully" });
   } catch (error) {
     const status = error.response?.status || 500;
     const detail = error.response?.data || error.message;
-    console.error("Error sending doorbell SMS via Infobip:", status, detail);
-    return res.status(502).json({ ok: false, error: "Failed to send SMS", detail });
+    console.error("Error sending doorbell notification via ntfy:", status, detail);
+    return res.status(502).json({ ok: false, error: "Failed to send notification", detail });
   }
 });
 
@@ -414,7 +470,12 @@ server.keepAliveTimeout = 61000;
 server.headersTimeout = 62000;
 
 // Periodically poll Arduino Cloud to capture out-of-band changes
+let statusPollInFlight = false;
 setInterval(async () => {
+  if (statusPollInFlight) {
+    return;
+  }
+  statusPollInFlight = true;
   try {
     const latest = await fetchLatestDoorStatus();
     if (currentDoorOpen === null) {
@@ -432,5 +493,7 @@ setInterval(async () => {
     }
   } catch (e) {
     console.warn("Background status poll failed:", e.message);
+  } finally {
+    statusPollInFlight = false;
   }
-}, 5000);
+}, STATUS_POLL_INTERVAL_MS);

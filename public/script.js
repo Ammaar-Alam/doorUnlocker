@@ -8,8 +8,19 @@ if (window.location.hostname !== 'localhost' && window.location.hostname !== '12
 document.addEventListener("DOMContentLoaded", function () {
   let authRequired = true; // assume auth is required by default
   let sse;
+  let statusPollTimer = null;
+  let controlsLocked = false;
+  let controlsBusy = false;
+  let pendingDoorOpen = null;
+  let pendingDoorExpiresAt = 0;
+  let pendingDoorTimer = null;
+  let lastConfirmedDoorOpen = null;
+  let lastCommandId = 0;
+  let lastStatusRequestId = 0;
+  const PENDING_DOOR_WINDOW_MS = 7000;
 
-  function setControlsEnabled(enabled) {
+  function syncControlsEnabled() {
+    const enabled = !controlsLocked && !controlsBusy;
     const doorSwitch = document.getElementById("doorSwitch");
     const openBtn = document.getElementById("manualOpenButton");
     const closeBtn = document.getElementById("manualCloseButton");
@@ -27,11 +38,104 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function updateLockUI(locked) {
+    controlsLocked = !!locked;
     const panel = document.querySelector('.control-panel');
     const overlay = document.getElementById('controls-overlay');
-    if (panel) panel.classList.toggle('locked', !!locked);
-    if (overlay) overlay.style.display = locked ? 'flex' : 'none';
-    setControlsEnabled(!locked);
+    if (panel) panel.classList.toggle('locked', controlsLocked);
+    if (overlay) overlay.style.display = controlsLocked ? 'flex' : 'none';
+    syncControlsEnabled();
+  }
+
+  function setControlsBusy(busy) {
+    controlsBusy = !!busy;
+    syncControlsEnabled();
+  }
+
+  function ensureStatusPolling() {
+    if (statusPollTimer) {
+      return;
+    }
+    statusPollTimer = setInterval(getDoorStatus, 4000);
+  }
+
+  function stopStatusPolling() {
+    if (!statusPollTimer) {
+      return;
+    }
+    clearInterval(statusPollTimer);
+    statusPollTimer = null;
+  }
+
+  function clearPendingDoorState() {
+    if (pendingDoorTimer) {
+      clearTimeout(pendingDoorTimer);
+      pendingDoorTimer = null;
+    }
+    pendingDoorOpen = null;
+    pendingDoorExpiresAt = 0;
+    setControlsBusy(false);
+  }
+
+  function hasPendingDoorState() {
+    if (pendingDoorOpen === null) {
+      return false;
+    }
+    if (Date.now() >= pendingDoorExpiresAt) {
+      clearPendingDoorState();
+      return false;
+    }
+    return true;
+  }
+
+  function beginPendingDoorState(nextDoorOpen) {
+    if (pendingDoorTimer) {
+      clearTimeout(pendingDoorTimer);
+    }
+    pendingDoorOpen = !!nextDoorOpen;
+    pendingDoorExpiresAt = Date.now() + PENDING_DOOR_WINDOW_MS;
+    setControlsBusy(true);
+    pendingDoorTimer = window.setTimeout(() => {
+      clearPendingDoorState();
+      getDoorStatus();
+    }, PENDING_DOOR_WINDOW_MS);
+  }
+
+  function applyDoorState(isOpen, source = "server") {
+    const nextDoorOpen = !!isOpen;
+
+    if (source === "local") {
+      setToggle(nextDoorOpen);
+      return;
+    }
+
+    if (hasPendingDoorState()) {
+      if (nextDoorOpen === pendingDoorOpen) {
+        lastConfirmedDoorOpen = nextDoorOpen;
+        clearPendingDoorState();
+        setToggle(nextDoorOpen);
+        return;
+      }
+
+      if (source !== "local") {
+        console.warn(`Ignoring stale ${source} door state`, {
+          pendingDoorOpen,
+          receivedDoorOpen: nextDoorOpen,
+        });
+        return;
+      }
+    }
+
+    lastConfirmedDoorOpen = nextDoorOpen;
+    setToggle(nextDoorOpen);
+  }
+
+  function revertPendingDoorState() {
+    clearPendingDoorState();
+    if (lastConfirmedDoorOpen === null) {
+      getDoorStatus();
+      return;
+    }
+    setToggle(lastConfirmedDoorOpen);
   }
 
   function startEventStream() {
@@ -40,24 +144,26 @@ document.addEventListener("DOMContentLoaded", function () {
         sse.close();
       }
       sse = new EventSource("/events");
+      sse.onopen = () => {
+        stopStatusPolling();
+      };
       sse.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           if (typeof data.doorOpen === "boolean") {
-            setToggle(data.doorOpen);
+            applyDoorState(data.doorOpen, "sse");
           }
         } catch (e) {
           console.warn("Bad SSE payload:", e);
         }
       };
       sse.onerror = () => {
-        // The browser will auto-reconnect; log for debugging.
+        ensureStatusPolling();
         console.warn("SSE connection error; will retry automatically.");
       };
     } catch (e) {
       console.warn("SSE unsupported or failed; falling back to polling.");
-      // fallback: periodic polling
-      setInterval(getDoorStatus, 4000);
+      ensureStatusPolling();
     }
   }
 
@@ -133,6 +239,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // fetch door status from server
   async function getDoorStatus() {
+    const requestId = ++lastStatusRequestId;
     try {
       const headers = { "Content-Type": "application/json" };
       if (authRequired) {
@@ -150,7 +257,10 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
       const data = await response.json();
-      setToggle(data.doorOpen);
+      if (requestId !== lastStatusRequestId) {
+        return;
+      }
+      applyDoorState(data.doorOpen, "status");
     } catch (error) {
       console.error("Error fetching door status:", error);
     }
@@ -164,12 +274,14 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   async function sendCommand(command) {
+    const commandId = ++lastCommandId;
     try {
       const headers = { "Content-Type": "application/json" };
       if (authRequired) {
         const token = localStorage.getItem("authToken");
         if (!token) {
           console.error("No auth token found. Please log in again.");
+          revertPendingDoorState();
           return;
         }
         headers["Authorization"] = token;
@@ -184,12 +296,29 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!response.ok) {
         const errorDetail = await response.text();
         console.error("Failed to send command:", errorDetail);
+        if (commandId === lastCommandId) {
+          revertPendingDoorState();
+        }
         return;
       }
       console.log(await response.text());
-      // Do not immediately fetch; SSE will push the new state shortly
+
+      window.setTimeout(() => {
+        if (commandId === lastCommandId && hasPendingDoorState()) {
+          getDoorStatus();
+        }
+      }, 1500);
+
+      window.setTimeout(() => {
+        if (commandId === lastCommandId && hasPendingDoorState()) {
+          getDoorStatus();
+        }
+      }, 4500);
     } catch (error) {
       console.error("Error during the request:", error);
+      if (commandId === lastCommandId) {
+        revertPendingDoorState();
+      }
     }
   }
 
@@ -209,17 +338,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function toggleSwitch() {
     const doorSwitch = document.getElementById("doorSwitch");
-    const command = doorSwitch.checked ? "open" : "close";
-    sendCommand(command);
-    updateStatus();
+    const nextDoorOpen = doorSwitch.checked;
+    beginPendingDoorState(nextDoorOpen);
+    sendCommand(nextDoorOpen ? "open" : "close");
+    applyDoorState(nextDoorOpen, "local");
   }
 
   function manualOpen() {
+    beginPendingDoorState(true);
     sendCommand("open");
+    applyDoorState(true, "local");
   }
 
   function manualClose() {
+    beginPendingDoorState(false);
     sendCommand("close");
+    applyDoorState(false, "local");
   }
 
   function ringDoorbell() {
