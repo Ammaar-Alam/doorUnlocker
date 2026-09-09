@@ -1,64 +1,65 @@
 # Door Opener
 
-A motor pulls a fishing line attached to my door handle. Open it from a browser or an iPhone shortcut, with the same live status shared across every browser.
+A gearmotor, a printed spindle, and a length of fishing line turn a regular door handle into one you can open from your phone. The website shows the mechanism in 3D, with live controller status and parts you can explore.
 
-[Open the website](https://door.ammaaralam.com) · [Watch it work](https://youtube.com/shorts/K_ev5bF7mhw)
+[Open the website](https://door.ammaaralam.com) · [Watch the demo](https://youtube.com/shorts/K_ev5bF7mhw)
 
-[![Add Door Opener to Shortcuts](https://img.shields.io/badge/Add_to_Shortcuts-Door_Opener-242424?style=for-the-badge&logo=apple&logoColor=white)](shortcuts/Door%20Opener%20%28Button%29.shortcut?raw=true)
+<a href="https://youtube.com/shorts/K_ev5bF7mhw"><img src="https://i.ytimg.com/vi/K_ev5bF7mhw/hqdefault.jpg" alt="Watch the door opener in action on YouTube" width="480" /></a>
 
-The shortcut asks for the door password once during installation and keeps it in your private copy. One press opens the handle, holds it for five seconds, then releases it. The Arduino owns the timer, so the phone does not need to remain awake. The repository includes the [editable shortcut source](shortcuts/Door%20Opener%20%28Button%29.plist).
+## The mechanism
 
-## How it works
+The motor winds fishing line onto a custom spool to pull the handle down. Reversing the motor lets the handle return. An arbor knot anchors the line to the spindle; a round turn and half hitches attach it to the handle, secured under duct tape. The assembly mounts to the door with adhesive strips.
 
-```text
-Browser / Shortcut → Node server → Arduino Cloud → Nano ESP32 → Motor
-Browser            ← Live updates ← Reported handle state ← Arduino
-```
+| Part | Purpose |
+| --- | --- |
+| Arduino Nano ESP32 | Receives commands over Wi-Fi and times each stroke |
+| L298N driver | Controls motor direction and speed |
+| BRINGSMART 24 V worm gearmotor | Winds and releases the line |
+| Printed spindle and base | Gather the line and hold the assembly together |
+| Mini breadboard and jumpers | Connect the controller and driver |
+| Fishing line, duct tape, mounting strips | Attach the mechanism to the handle and door |
 
-- The website's switch opens or releases the handle until another command changes it
-- The shortcut runs one five-second cycle; another Open does not extend an active cycle
-- Close cancels the hold; repeated normal commands do not repeat motor strokes
-- Force Open and Force Close deliberately run another calibrated stroke for string adjustment
-- Password protection runs from midnight to 8 a.m. in New York, including daylight saving time
+The [hardware guide](hardware/README.md) has part links and print files, including the original spindle STL. The [firmware guide](firmware/README.md) covers wiring, Arduino Cloud setup, uploading, and calibration.
 
-The status describes the controller's handle position. There is no sensor confirming that the physical door has closed. Always start with the string released; power cycling cannot measure its position.
+## Try the interface
 
-## Run locally
-
-Use Node.js 22 and npm.
+Use Node.js 22 and npm. No board or credentials are needed for the preview.
 
 ```sh
 npm ci
-cp .env.example .env
+npm run preview
 ```
 
-Fill `.env` with the Thing and property IDs from Arduino Cloud, an Arduino API client, the door password, and a persistent signing secret. `PROPERTY_ID` identifies the reported `doorOpen` variable; `COMMAND_PROPERTY_ID` identifies `doorCommand`. Generate a signing secret with `openssl rand -hex 32`.
+Open [localhost:3107](http://localhost:3107). The preview uses a simulated controller and cannot move the real motor. Select a part to inspect it, drag to rotate the assembly, or use the door controls to see it move.
+
+## Connect your own door
+
+Set up the board using the [firmware guide](firmware/README.md), then configure the server:
+
+```sh
+cp .env.example .env
+openssl rand -hex 32
+```
+
+Fill `.env` with your Arduino Cloud Thing ID, API credentials, door password, and the generated signing secret. `PROPERTY_ID` is the read-only `doorOpen` property; `COMMAND_PROPERTY_ID` is the writable `doorCommand` property.
 
 ```sh
 npm test
 npm start
 ```
 
-Open `http://localhost:3000`. Door control requires the configured board to be online. Every API response, including errors, is JSON. See the [API guide](docs/API_GUIDE.md).
+Open [localhost:3000](http://localhost:3000). The website shares the controller’s reported state across connected browsers. See the [API guide](docs/API_GUIDE.md) for other clients and authentication settings.
 
-## Hardware
+Opening runs a calibrated 970 ms stroke; releasing runs for 650 ms. Normal commands do not repeat a stroke that has already completed. **Adjust the string** exposes force controls for an extra stroke. Calibrate the timings for your own motor and handle.
 
-- Arduino Nano ESP32
-- L298N motor driver and 24 V DC motor
-- Fishing line, mounting strips, and a printed spindle
+There is no position sensor: status describes the controller’s state, not whether the physical door is shut. Start with the string released and watch the first powered cycle.
 
-The calibrated sketch and wiring are in [firmware/](firmware/README.md). The [print files](hardware/README.md) include the optimized spindle STL and Bambu Studio project.
+## iPhone shortcut
 
-## Hosting
+[Add Door Opener to Shortcuts](shortcuts/Door%20Opener%20%28Button%29.shortcut?raw=true) · [Editable source](shortcuts/Door%20Opener%20%28Button%29.plist)
 
-The application is one Node process; it does not need a separate worker or database. [Hosting instructions](docs/HOSTING.md) describe an isolated service on an existing Linux machine, with memory and CPU limits and HTTPS through Caddy. Arduino status polling runs only while browsers are watching.
+One press opens the handle, holds it for five seconds, then releases it. The Arduino owns the timer, so the phone does not need to stay awake. Close cancels the hold, and repeated shortcut presses do not extend it.
+
+The supplied shortcut targets the demo door and asks for its password during installation. For your own build, change its server URL and password in Shortcuts.
 
 [MIT license](LICENSE)
-
-## Visual preview
-
-```sh
-npm run preview
-```
-
-Open `http://localhost:3107` to inspect the interface and animated mechanism with a simulated controller. This runs without credentials and never connects to the hardware. The spindle and mounting base are rendered from their original STLs. Select a part to inspect it; the electronics include a wiring diagram matched to the firmware. Motion illustrates reported handle states rather than measured shaft position.

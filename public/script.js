@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const feedback = document.getElementById('control-feedback');
   let locked = true;
   let busy = false;
+  let moving = false;
+  let opening = false;
   let doorOpen = null;
   let sse = null;
   let fallbackTimer = null;
@@ -16,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function syncControls() {
     for (const control of [toggle, openButton, closeButton]) {
-      control.disabled = locked || busy || doorOpen === null;
+      control.disabled = locked || busy || moving || doorOpen === null;
     }
     const state = locked ? 'locked' : doorOpen === null ? 'unknown' : doorOpen ? 'open' : 'closed';
     document.body.dataset.doorState = state;
@@ -26,9 +28,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('connection-status').textContent = locked ? 'Password protected' : doorOpen === null ? 'Disconnected' : 'Connected';
     const label = doorOpen ? 'Close door' : 'Open door';
     toggle.setAttribute('aria-label', label);
-    toggle.setAttribute('aria-busy', String(busy));
-    document.getElementById('toggle-label').textContent = busy ? 'Sending…' : label;
+    toggle.setAttribute('aria-busy', String(busy || moving));
+    document.getElementById('toggle-label').textContent = moving ? opening ? 'Opening…' : 'Closing…' : busy ? 'Sending…' : label;
   }
+
+  document.addEventListener('door-motion', event => {
+    moving = event.detail.active;
+    opening = event.detail.opening;
+    syncControls();
+  });
 
   function showError(message) {
     feedback.textContent = message;
@@ -148,14 +156,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   async function sendCommand(command) {
-    if (locked || busy || doorOpen === null) return;
+    if (locked || busy || moving || doorOpen === null) return;
     busy = true;
     showError('');
     syncControls();
+    document.dispatchEvent(new CustomEvent('door-command', { detail: { command } }));
     try {
       await request('/command', { method: 'POST', body: JSON.stringify({ command }) });
       await getDoorStatus();
     } catch (error) {
+      document.dispatchEvent(new CustomEvent('door-command', { detail: { command: null } }));
       showError(error.message);
     } finally {
       busy = false;
