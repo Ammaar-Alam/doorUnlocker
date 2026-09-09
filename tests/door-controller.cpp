@@ -44,6 +44,15 @@ int main() {
   door.update(18620);
   assert(!door.open && !door.moving);
 
+  door.command(DoorAction::Pulse, 20000);
+  door.command(DoorAction::ForceClose, 20020);
+  door.update(20970);
+  assert(door.open && !door.moving);
+  door.update(25970);
+  assert(door.moving && !door.opening);
+  door.update(26620);
+  assert(!door.open && !door.moving && door.pwm == 0);
+
   const uint32_t start = UINT32_MAX - 100;
   door.command(DoorAction::Pulse, start);
   door.update(uint32_t(start + 970));

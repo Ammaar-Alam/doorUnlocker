@@ -27,8 +27,8 @@ struct DoorController {
   void command(DoorAction action, uint32_t now) {
     const bool force = action == DoorAction::ForceOpen || action == DoorAction::ForceClose;
     const bool wantOpen = action != DoorAction::Close && action != DoorAction::ForceClose;
-    if (!wantOpen) pulse = false;
     if (force && moving) return;
+    if (!wantOpen) pulse = false;
     if (action == DoorAction::Pulse && !pulse) {
       pulse = true;
       heldSince = now;
