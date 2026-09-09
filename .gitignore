@@ -60,11 +60,6 @@ pnpm-lock.yaml
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# Xcode user data (if opening iOS projects)
-*/xcuserdata/*
-**/xcuserdata/*
-/Ammaar's Dorm Controls/**/xcuserdata/
-
 # Misc
 *.tgz
 *.tar.gz

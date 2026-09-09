@@ -2,11 +2,11 @@ if (!['localhost', '127.0.0.1'].includes(location.hostname) && location.protocol
   location.replace('https://' + location.host + location.pathname + location.search);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const doorSwitch = document.getElementById("doorSwitch");
-  const openButton = document.getElementById("manualOpenButton");
-  const closeButton = document.getElementById("manualCloseButton");
-  const feedback = document.getElementById("control-feedback");
+document.addEventListener('DOMContentLoaded', () => {
+  const toggle = document.getElementById('doorToggle');
+  const openButton = document.getElementById('manualOpenButton');
+  const closeButton = document.getElementById('manualCloseButton');
+  const feedback = document.getElementById('control-feedback');
   let locked = true;
   let busy = false;
   let doorOpen = null;
@@ -15,12 +15,19 @@ document.addEventListener("DOMContentLoaded", () => {
   let statusRevision = 0;
 
   function syncControls() {
-    for (const control of [doorSwitch, openButton, closeButton]) {
+    for (const control of [toggle, openButton, closeButton]) {
       control.disabled = locked || busy || doorOpen === null;
     }
-    document.querySelector('.control-panel').classList.toggle('locked', locked);
-    document.getElementById('controls-overlay').style.display = locked ? 'flex' : 'none';
-    document.getElementById('login-section').style.display = locked ? 'block' : 'none';
+    const state = locked ? 'locked' : doorOpen === null ? 'unknown' : doorOpen ? 'open' : 'closed';
+    document.body.dataset.doorState = state;
+    document.getElementById('login-section').hidden = !locked;
+    document.getElementById('door-state').textContent = locked ? 'Protected' : doorOpen === null ? 'Unavailable' : doorOpen ? 'Open' : 'Closed';
+    document.getElementById('state-detail').textContent = locked ? 'Enter a password to continue.' : doorOpen === null ? 'The controller is out of reach.' : doorOpen ? 'The handle is held open.' : 'The handle is released.';
+    document.getElementById('connection-status').textContent = locked ? 'Password protected' : doorOpen === null ? 'Disconnected' : 'Connected';
+    const label = doorOpen ? 'Close door' : 'Open door';
+    toggle.setAttribute('aria-label', label);
+    toggle.setAttribute('aria-busy', String(busy));
+    document.getElementById('toggle-label').textContent = busy ? 'Sending…' : label;
   }
 
   function showError(message) {
@@ -29,13 +36,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function applyDoorState(data) {
-    doorOpen = data.online && typeof data.doorOpen === 'boolean' ? data.doorOpen : null;
-    doorSwitch.indeterminate = doorOpen === null;
-    doorSwitch.checked = doorOpen === true;
-    document.getElementById('open').style.color = doorOpen === true ? '#FF5E55' : '#888';
-    document.getElementById('closed').style.color = doorOpen === false ? '#4CAF50' : '#888';
-    document.getElementById('connection-status').textContent = doorOpen === null ? 'Status unavailable' : '';
+    doorOpen = !locked && data.online && typeof data.doorOpen === 'boolean' ? data.doorOpen : null;
     syncControls();
+    document.dispatchEvent(new CustomEvent('door-state', { detail: { open: doorOpen } }));
   }
 
   async function request(path, options = {}) {
@@ -48,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (response.status === 401) {
         locked = true;
         stopEvents();
-        syncControls();
+        applyDoorState({});
       }
       throw new Error(data.message || 'Request failed');
     }
@@ -67,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const data = await request('/status');
       if (revision === statusRevision) applyDoorState(data);
-    } catch (error) {
+    } catch {
       if (revision === statusRevision) applyDoorState({});
     }
   }
@@ -83,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data.authRequired) {
             locked = true;
             stopEvents();
-            syncControls();
+            applyDoorState({});
             return;
           }
           clearInterval(fallbackTimer);
@@ -108,12 +111,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (document.hidden) return;
     try {
       const data = await request('/auth-status');
+      document.getElementById('preview-badge').hidden = data.preview !== true;
       locked = data.authRequired && !data.authenticated;
       syncControls();
-      if (locked) stopEvents();
-      else startEvents();
+      showError('');
+      if (locked) {
+        stopEvents();
+        applyDoorState({});
+      } else startEvents();
     } catch {
-      locked = true;
+      ++statusRevision;
       stopEvents();
       applyDoorState({});
       showError('Unable to connect. Please try again.');
@@ -123,7 +130,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById('login-form').addEventListener('submit', async event => {
     event.preventDefault();
     const errorLabel = document.getElementById('login-error');
-    errorLabel.style.display = 'none';
+    const submit = event.currentTarget.querySelector('button');
+    errorLabel.hidden = true;
+    submit.disabled = true;
     try {
       await request('/login', { method: 'POST', body: JSON.stringify({ password: document.getElementById('password').value }) });
       document.getElementById('password').value = '';
@@ -132,7 +141,9 @@ document.addEventListener("DOMContentLoaded", () => {
       await refreshAuth();
     } catch (error) {
       errorLabel.textContent = error.message;
-      errorLabel.style.display = 'block';
+      errorLabel.hidden = false;
+    } finally {
+      submit.disabled = false;
     }
   });
 
@@ -152,43 +163,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  doorSwitch.addEventListener('change', () => {
-    const command = doorSwitch.checked ? 'open' : 'close';
-    doorSwitch.checked = doorOpen === true;
-    void sendCommand(command);
-  });
+  toggle.addEventListener('click', () => sendCommand(doorOpen ? 'close' : 'open'));
   openButton.addEventListener('click', () => sendCommand('force-open'));
   closeButton.addEventListener('click', () => sendCommand('force-close'));
 
-  const navToggle = document.querySelector('.nav-toggle');
-  const navLinks = document.querySelector('.nav-links');
-  navToggle.addEventListener('click', () => {
-    navLinks.classList.toggle('open');
-    navToggle.setAttribute('aria-expanded', String(navLinks.classList.contains('open')));
-  });
-  document.addEventListener('click', event => {
-    if (!navLinks.contains(event.target) && !navToggle.contains(event.target)) {
-      navLinks.classList.remove('open');
-      navToggle.setAttribute('aria-expanded', 'false');
-    }
-  });
-
-  const bellButton = document.getElementById('ringDoorbellButton');
-  bellButton.addEventListener('click', async () => {
+  document.getElementById('doorbell-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = document.getElementById('ringDoorbellButton');
     const input = document.getElementById('doorbellMessage');
     const result = document.getElementById('doorbell-feedback');
-    bellButton.disabled = true;
-    result.style.display = 'block';
+    button.disabled = true;
+    result.hidden = true;
     try {
       const data = await request('/ring-doorbell', { method: 'POST', body: JSON.stringify({ message: input.value }) });
       result.textContent = data.message;
-      result.style.color = '#4CAF50';
+      result.classList.remove('error-text');
       input.value = '';
     } catch (error) {
       result.textContent = error.message;
-      result.style.color = '#FF5E55';
+      result.classList.add('error-text');
     } finally {
-      bellButton.disabled = false;
+      button.disabled = false;
+      result.hidden = false;
     }
   });
 
@@ -199,6 +195,5 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener('pagehide', stopEvents);
   window.addEventListener('pageshow', refreshAuth);
   setInterval(refreshAuth, 30000);
-  syncControls();
   void refreshAuth();
 });
