@@ -53,19 +53,21 @@
       <div class="toggle-container">
         <span class="status-text" id="closed">CLOSED</span>
         <label class="switch">
-          <input type="checkbox" id="doorSwitch" />
+          <input type="checkbox" id="doorSwitch" aria-label="Open door" disabled />
           <span class="slider round"></span>
         </label>
         <span class="status-text" id="open">OPEN</span>
       </div>
       <div class="manual-buttons-container">
-        <button id="manualOpenButton" class="manual-btn open-btn">
-          [MANUAL] Open Door
+        <button id="manualOpenButton" class="manual-btn open-btn" disabled>
+          Force Open
         </button>
-        <button id="manualCloseButton" class="manual-btn close-btn">
-          [MANUAL] Close Door
+        <button id="manualCloseButton" class="manual-btn close-btn" disabled>
+          Force Close
         </button>
       </div>
+      <p id="connection-status" class="note-text" role="status">Status unavailable</p>
+      <p id="control-feedback" class="error-text" role="alert" hidden></p>
       <p class="note-text">
         <i>
           PS: i know my friends, and to avoid getting kidnapped in the middle of
@@ -89,7 +91,7 @@
     <section id="login-section" class="card-section compact-card grid-login">
       <h2 class="section-title">Login</h2>
       <form id="login-form" class="ctr-row">
-        <input type="password" id="password" class="styled-input" placeholder="Enter password" required />
+        <input type="password" id="password" aria-label="Password" autocomplete="current-password" class="styled-input" placeholder="Enter password" required />
         <button type="submit" class="styled-button gradient-btn">Login</button>
       </form>
       <p id="login-error" class="error-text" style="display: none;">Invalid password. Please try again.</p>

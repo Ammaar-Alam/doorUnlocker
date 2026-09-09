@@ -1,0 +1,37 @@
+[Unit]
+Description=Door Unlocker web service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=doorunlocker
+Group=doorunlocker
+WorkingDirectory=/opt/doorunlocker
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3107
+EnvironmentFile=/etc/doorunlocker/doorunlocker.env
+ExecStart=/usr/bin/node --max-old-space-size=128 /opt/doorunlocker/server.mjs
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+SyslogIdentifier=doorunlocker
+
+MemoryHigh=192M
+MemoryMax=256M
+CPUQuota=25%
+TasksMax=64
+LimitNOFILE=4096
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

@@ -1,90 +1,46 @@
-# API Guide for Smart Dorm Door Control System
+# API
 
-## Base URL
-
-All API requests should be sent to: `https://door.ammaar.xyz/api`
+Base URL: `https://door.ammaaralam.com`. The same routes are available under `/api` for existing clients. Responses use JSON and are not cached.
 
 ## Authentication
 
-Most endpoints require authentication. Include the JWT token in the Authorization header: `Authorization: Bearer <your_jwt_token>`
+During protected hours, supply the password in the JSON request body, or use `POST /login` with a `password` string to obtain a token. A browser receives an HTTP-only cookie; other clients can send the returned token in `Authorization: Bearer …`. Login always checks the password, including during public hours. Tokens expire after 24 hours by default.
 
-## Endpoints
+`AUTH_REQUIRED=scheduled` protects midnight through 7:59:59 a.m. in `America/New_York`. `true` always requires authentication; `false` allows public control. The schedule is evaluated in the server on every request and survives restarts without a scheduled job.
 
-### 1. Login
+## Routes
 
-- **URL:** `/login`
-- **Method:** `POST`
-- **Auth required**: No
-- **Data constraints:**
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/auth-status` | Returns `authRequired` and `authenticated` |
+| POST | `/login` | Checks `password`, sets a cookie, and returns `token` |
+| GET | `/status` | Returns `doorOpen`, `online`, and `updatedAt` |
+| GET | `/events` | Streams the same status using server-sent events |
+| POST | `/open` | Opens the handle without a timer |
+| POST | `/close` | Releases the handle and cancels an active hold |
+| POST | `/pulse` | Opens, holds for five seconds, and releases on the Arduino |
+| POST | `/force-open` | Runs another opening stroke while idle |
+| POST | `/force-close` | Runs another closing stroke while idle |
+| POST | `/command` | Accepts `command` with one of the five action names above |
+| POST | `/emergency-close` | Alias for normal Close |
+| POST | `/ring-doorbell` | Sends optional `message` text when notification delivery is configured |
 
-```json
-{
-  "password": "[valid password string]"
-}
-```
-#### Success Response:
+Successful commands return `{"ok":true,"command":"pulse","message":"Command sent"}`. This confirms Arduino Cloud accepted the request; it is not a physical-position acknowledgement. Read `/status` or `/events` for the controller's reported state. When offline, `doorOpen` is `null`, not a stale open or closed value.
 
-- **Code**: `200`
-- **Content** : `{ "message": "Login successful", "token": "[JWT Token]" }`
+The Arduino ignores expired commands and commands retained from a previous connection. It owns all timing and ignores duplicate normal Open/Close movements. A Close received during the opening stroke completes that calibrated stroke before reversing; a Close during the hold starts releasing immediately. Force commands are ignored while a stroke is already running.
 
+## Errors
 
-### 2. Get Door Status
-- **URL**: `/status`
-- **Method**: `GET`
-- **Auth required**: `Yes`
-- **Success Response**:
-  - **Code**: `200`
-  - **Content** : `{ "message": "Login successful", "token": "[JWT Token]" }`
+Errors return `{"ok":false,"message":"…"}` with a suitable HTTP status:
 
-### 3. Send Door Command
+- `400`: invalid command, body, or JSON
+- `401`: login required or invalid password
+- `409`: another request is currently publishing a command
+- `503`: controller offline or configuration missing
+- `502`: Arduino or notification service failure, including a timeout
 
-- **URL**: `/command`
-- **Method**: `POST`
-- **Auth required**: Yes
-- **Data Constraints**:
-```json
-{
-  "command": "[open|close]"
-}
-```
-- **Success Response**:
-  - **Code**: `200`
-  - **Content** : `Command sent successfully}`
+Do not automatically retry a command after a timeout: it may already have reached the controller. Check the live state before issuing another action.
 
-### 4. Emergency Close
+## Temporary authentication override
 
-- **URL**: `/emergency-close`
-- **Method**: `POST`
-- **Auth required**: Yes
-- **Success Response**:
-  - **Code**: `200`
-  - **Content** : `Emergency close Command sent successfully}`
-
-## Error Responses
-
-- **Condition**: If not authenticated or invalid token
-  - **Code**: `403`
-  - **Content**: `{ "message": "Not authenticated" }`
-
-- **Condition**: If internal server error
-  - **Code**: `500`
-  - **Content**: `Internal Server Error`
-
-## Examples
-
-### Curl Examples
-
-#### 1. Login:
-```
-curl -X POST https://door.ammaar.xyz/api/login -H "Content-Type: application/json" -d '{"password":"your_password"}'
-```
-
-#### 2. Get Status (after login:
-```
-curl https://door.ammaar.xyz/api/status -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-#### 3. Send Open Command:
-```
-curl -X POST https://door.ammaar.xyz/api/command -H "Authorization: Bearer YOUR_JWT_TOKEN" -H "Content-Type: application/json" -d '{"command":"open"}'
-```
+`POST /admin/set-auth-required` requires `X-Admin-Token` matching `ADMIN_TOKEN`. Send `enabled: true` to protect access, `false` to allow public control, or `null` to restore the configured schedule. This override lasts until it is cleared or the server restarts. Use `AUTH_REQUIRED=true` in the service configuration for an override that must survive restarts.

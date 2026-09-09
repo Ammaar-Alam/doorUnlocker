@@ -1,499 +1,361 @@
 import express from "express";
-import fetch from "node-fetch";
+import { startArduinoStatus } from "./arduino-status.mjs";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import axios from "axios";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-// load env vars
 dotenv.config();
 
-const app = express();
-const port = process.env.PORT || 3000;
-
-// get env vars
+export const app = express();
+const api = express.Router();
 const thingId = process.env.THING_ID;
 const propertyId = process.env.PROPERTY_ID;
+const commandPropertyId = process.env.COMMAND_PROPERTY_ID;
 const PASSWORD = process.env.PASSWORD;
 const SECRET_KEY = process.env.SECRET_KEY || process.env.JWT_SECRET;
-const AUTH_TOKEN_TTL_SECONDS = Number.parseInt(process.env.AUTH_TOKEN_TTL_SECONDS || "86400", 10);
-const ARDUINO_HTTP_TIMEOUT_MS = Number.parseInt(process.env.ARDUINO_HTTP_TIMEOUT_MS || "10000", 10);
-const STATUS_POLL_INTERVAL_MS = Number.parseInt(process.env.STATUS_POLL_INTERVAL_MS || "5000", 10);
-const COMMAND_SETTLE_MS = Number.parseInt(process.env.COMMAND_SETTLE_MS || "6000", 10);
-// Mutable auth flag: defaults from env but can be toggled at runtime via admin endpoint
-let authRequired = process.env.AUTH_REQUIRED === "true";
-// secret required to toggle auth via admin endpoint
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || process.env.AUTH_ADMIN_TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
-// ntfy configuration (used for doorbell notifications)
+const AUTH_MODE = process.env.AUTH_REQUIRED || "scheduled";
+const AUTH_TOKEN_TTL_SECONDS = Number(process.env.AUTH_TOKEN_TTL_SECONDS || 86400);
+const ARDUINO_HTTP_TIMEOUT_MS = Number(process.env.ARDUINO_HTTP_TIMEOUT_MS || 8000);
+const STATUS_POLL_INTERVAL_MS = Number(process.env.STATUS_POLL_INTERVAL_MS || 5000);
 const NTFY_URL = (process.env.NTFY_URL || "https://ntfy.sh").replace(/\/$/, "");
 const NTFY_TOPIC = process.env.NTFY_TOPIC;
+const SMS_URL = process.env.INFOBIP_BASE_URL?.replace(/\/$/, "");
+const SMS_KEY = process.env.INFOBIP_API_KEY;
+const SMS_FROM = process.env.INFOBIP_FROM_NUMBER;
+const SMS_TO = process.env.INFOBIP_TO_NUMBER;
+const smsConfigured = SMS_URL && SMS_KEY && SMS_FROM && SMS_TO;
 const authSecret = SECRET_KEY || crypto.randomBytes(32).toString("hex");
-if (!SECRET_KEY) {
-  console.warn("SECRET_KEY/JWT_SECRET is not set. Using ephemeral auth secret for this dyno.");
+const newYorkHour = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York", hour: "numeric", hourCycle: "h23",
+});
+let authOverride = null;
+
+export function authRequired(now = new Date()) {
+  if (authOverride !== null) return authOverride;
+  return AUTH_MODE === "scheduled"
+    ? Number(newYorkHour.format(now)) < 8
+    : AUTH_MODE !== "false";
 }
 
-// set up middleware
-app.use(express.static("public"));
-app.use(express.json());
-app.use(cookieParser());
-
-// trust first proxy 
 app.set("trust proxy", 1);
-
-console.log("AUTH_REQUIRED:", authRequired);
-console.log("Admin toggle enabled:", ADMIN_TOKEN ? "yes" : "no");
-
-function extractAuthToken(req) {
-  const header = (req.headers["authorization"] || "").toString().trim();
-  if (header.toLowerCase().startsWith("bearer ")) {
-    return header.slice(7).trim();
-  }
-  if (header) {
-    return header;
-  }
-  return (req.cookies?.authToken || "").toString().trim();
-}
-
-function verifyAuthToken(token) {
-  if (!token) {
-    return null;
-  }
-  try {
-    return jwt.verify(token, authSecret);
-  } catch {
-    return null;
-  }
-}
-
-// --- Real-time status broadcasting (SSE) ---
-const sseClients = new Set();
-let currentDoorOpen = null; // cache of last known door state
-let suppressContradictUntil = 0; // time until which contradictory updates are ignored
-
-function sseSend(res, data) {
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
-}
-
-function broadcastStatus(doorOpen) {
-  for (const res of sseClients) {
-    try {
-      sseSend(res, { doorOpen });
-    } catch (e) {
-      // ignore broken connections; they'll be cleaned up on 'close'
-    }
-  }
-}
-
-function hasSuppressedDoorState() {
-  return currentDoorOpen !== null && Date.now() < suppressContradictUntil;
-}
-
-async function getVisibleDoorStatus() {
-  if (hasSuppressedDoorState()) {
-    return currentDoorOpen;
-  }
-  const latest = await fetchLatestDoorStatus();
-  currentDoorOpen = latest;
-  return latest;
-}
-
-function applyOptimisticDoorState(doorOpen) {
-  currentDoorOpen = !!doorOpen;
-  suppressContradictUntil = Date.now() + COMMAND_SETTLE_MS;
-  broadcastStatus(currentDoorOpen);
-}
-
-function scheduleDoorStateVerification(expectedDoorOpen) {
-  setTimeout(async () => {
-    try {
-      const first = await fetchLatestDoorStatus();
-      if (first === expectedDoorOpen) {
-        currentDoorOpen = first;
-        suppressContradictUntil = 0;
-        return;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-      const second = await fetchLatestDoorStatus();
-      currentDoorOpen = second;
-      suppressContradictUntil = 0;
-
-      if (second !== expectedDoorOpen) {
-        broadcastStatus(currentDoorOpen);
-      }
-    } catch (e) {
-      console.warn("Post-command verification failed:", e.message);
-    }
-  }, 2000);
-}
-
-let cachedAccessToken = null;
-let cachedAccessTokenExpiry = 0;
-let accessTokenInFlight = null;
-
-async function fetchWithTimeout(url, options = {}, timeoutMs = ARDUINO_HTTP_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new Error(`Request timed out after ${timeoutMs}ms`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function fetchLatestDoorStatus() {
-  const accessToken = await getAccessToken();
-  const response = await fetchWithTimeout(
-    `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to get property status: ${response.status}`);
-  }
-  const status = await response.json();
-  return !!status.last_value;
-}
-
-// SSE endpoint
-app.get("/events", async (req, res) => {
-  if (authRequired) {
-    const payload = verifyAuthToken(extractAuthToken(req));
-    if (!payload?.authenticated) {
-      return res.status(403).end();
-    }
-  }
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
-
-  // Keep connection alive with comments
-  const keepAlive = setInterval(() => {
-    res.write(": keep-alive\n\n");
-  }, 25000);
-
-  // Register client
-  sseClients.add(res);
-
-  // Send initial status
-  try {
-    if (currentDoorOpen === null) {
-      currentDoorOpen = await fetchLatestDoorStatus();
-    }
-    sseSend(res, { doorOpen: currentDoorOpen });
-  } catch (e) {
-    // best-effort: don't terminate stream; client will rely on fallback
-    console.error("Initial SSE status fetch failed:", e.message);
-  }
-
-  req.on("close", () => {
-    clearInterval(keepAlive);
-    sseClients.delete(res);
-    try { res.end(); } catch {}
-  });
-});
-
-// check if auth is required
-app.get("/auth-status", (req, res) => {
-  res.json({ authRequired });
-});
-
-// login route
-app.post("/login", (req, res) => {
-  const { password } = req.body;
-  if (!authRequired || password === PASSWORD) {
-    const token = jwt.sign(
-      { authenticated: true },
-      authSecret,
-      { expiresIn: AUTH_TOKEN_TTL_SECONDS }
-    );
-    res.cookie("authToken", token, {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: AUTH_TOKEN_TTL_SECONDS * 1000,
-    });
-    res.status(200).json({
-      message: "Login successful",
-      token,
-    });
-  } else {
-    res.status(401).json({ message: "Invalid password" });
-  }
-});
-
-// auth middleware
-function checkAuth(req, res, next) {
-  if (!authRequired) {
-    return next();
-  }
-
-  const token = extractAuthToken(req);
-  if (!token) {
-    return res.status(403).json({ message: "No token provided" });
-  }
-  const payload = verifyAuthToken(token);
-  if (!payload?.authenticated) {
-    return res.status(403).json({ message: "Not authenticated" });
-  }
-  req.auth = payload;
+app.use(express.static(fileURLToPath(new URL("./public", import.meta.url))));
+app.use(express.json({ limit: "16kb" }));
+app.use(cookieParser());
+app.use(["/api", "/"], api);
+api.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
   next();
+});
+
+function authenticated(req) {
+  const header = (req.headers.authorization || "").trim();
+  const token = header.replace(/^Bearer\s+/i, "") || req.cookies?.authToken;
+  try {
+    return jwt.verify(token, authSecret, { algorithms: ["HS256"] }).authenticated === true;
+  } catch {
+    return false;
+  }
 }
 
-// get Arduino IoT Cloud access token
+function passwordMatches(password) {
+  if (!PASSWORD || typeof password !== "string") return false;
+  const supplied = crypto.createHash("sha256").update(password).digest();
+  const expected = crypto.createHash("sha256").update(PASSWORD).digest();
+  return crypto.timingSafeEqual(supplied, expected);
+}
+
+function checkAuth(req, res, next) {
+  if (!authRequired() || authenticated(req) || passwordMatches(req.body?.password)) return next();
+  res.status(401).json({ ok: false, message: "Please log in to control the door" });
+}
+
+api.get("/auth-status", (req, res) => {
+  res.json({ authRequired: authRequired(), authenticated: authenticated(req) });
+});
+
+api.post("/login", (req, res) => {
+  if (!PASSWORD || !SECRET_KEY) {
+    return res.status(503).json({ ok: false, message: "Login is not configured" });
+  }
+  if (!passwordMatches(req.body?.password)) {
+    return res.status(401).json({ ok: false, message: "Invalid password" });
+  }
+  const token = jwt.sign({ authenticated: true }, authSecret, { expiresIn: AUTH_TOKEN_TTL_SECONDS });
+  res.cookie("authToken", token, {
+    secure: process.env.NODE_ENV === "production", httpOnly: true,
+    sameSite: "lax", maxAge: AUTH_TOKEN_TTL_SECONDS * 1000,
+  });
+  res.json({ ok: true, message: "Login successful", token });
+});
+
+let accessToken = null;
+let tokenExpiresAt = 0;
+let tokenInFlight = null;
+
 async function getAccessToken() {
-  if (cachedAccessToken && Date.now() < cachedAccessTokenExpiry) {
-    return cachedAccessToken;
-  }
-
-  if (accessTokenInFlight) {
-    return accessTokenInFlight;
-  }
-
-  accessTokenInFlight = (async () => {
-    try {
-      const response = await axios.post(
-        "https://api2.arduino.cc/iot/v1/clients/token",
-        new URLSearchParams({
-          grant_type: "client_credentials",
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
-          audience: "https://api2.arduino.cc/iot",
-        }),
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          timeout: ARDUINO_HTTP_TIMEOUT_MS,
-        }
-      );
-      const token = response.data?.access_token;
-      if (!token) {
-        throw new Error("Arduino token response missing access_token");
-      }
-      const expiresInSeconds = Number(response.data?.expires_in);
-      const ttlMs = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
-        ? expiresInSeconds * 1000
-        : 3600 * 1000;
-      cachedAccessToken = token;
-      cachedAccessTokenExpiry = Date.now() + Math.max(5000, ttlMs - 30000);
-      return cachedAccessToken;
-    } catch (error) {
-      console.error("Error getting access token:", error.message || error);
-      throw error;
-    } finally {
-      accessTokenInFlight = null;
-    }
+  if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
+  if (tokenInFlight) return tokenInFlight;
+  tokenInFlight = (async () => {
+    const response = await fetch("https://api2.arduino.cc/iot/v1/clients/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials", client_id: process.env.CLIENT_ID,
+        client_secret: process.env.CLIENT_SECRET, audience: "https://api2.arduino.cc/iot",
+      }),
+      signal: AbortSignal.timeout(ARDUINO_HTTP_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`Arduino authentication failed (${response.status})`);
+    const data = await response.json();
+    if (!data.access_token || !(data.expires_in > 0)) throw new Error("Invalid Arduino token response");
+    accessToken = data.access_token;
+    tokenExpiresAt = Date.now() + Math.max(0, data.expires_in * 1000 - 30000);
+    return accessToken;
   })();
-
-  return accessTokenInFlight;
-}
-
-// send command to Arduino IoT Cloud
-async function sendCommand(value) {
-  const accessToken = await getAccessToken();
-  const response = await fetchWithTimeout(
-    `https://api2.arduino.cc/iot/v2/things/${thingId}/properties/${propertyId}/publish`,
-    {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ value }),
-    }
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to update property: ${response.status}`);
+  try {
+    return await tokenInFlight;
+  } finally {
+    tokenInFlight = null;
   }
 }
 
-async function handleDoorCommandRequest(res, nextDoorOpen, successMessage) {
-  try {
-    await sendCommand(nextDoorOpen);
-    applyOptimisticDoorState(nextDoorOpen);
-    scheduleDoorStateVerification(nextDoorOpen);
-    res.status(200).send(successMessage);
-  } catch (error) {
-    console.error("Error sending command:", error);
-    res.status(500).send("Internal Server Error");
+async function arduinoRequest(path, options = {}, retryAuth = true) {
+  const token = await getAccessToken();
+  const response = await fetch(`https://api2.arduino.cc/iot/v2/${path}`, {
+    ...options,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(ARDUINO_HTTP_TIMEOUT_MS),
+  });
+  if (response.status === 401 && retryAuth) {
+    await response.arrayBuffer();
+    if (accessToken === token) accessToken = null;
+    return arduinoRequest(path, options, false);
   }
-}
-
-// handle door commands
-app.post("/command", checkAuth, async (req, res) => {
-  const { command } = req.body;
-  if (command !== "open" && command !== "close") {
-    return res.status(400).json({ message: "Command must be 'open' or 'close'" });
-  }
-  return handleDoorCommandRequest(
-    res,
-    command === "open",
-    "Command sent successfully"
-  );
-});
-
-// emergency close route
-app.post("/emergency-close", checkAuth, async (req, res) => {
-  return handleDoorCommandRequest(res, false, "Emergency close command sent successfully");
-});
-
-// open door route
-app.post("/open", checkAuth, async (req, res) => {
-  return handleDoorCommandRequest(res, true, "Open command sent successfully");
-});
-
-// close door route
-app.post("/close", checkAuth, async (req, res) => {
-  return handleDoorCommandRequest(res, false, "Close command sent successfully");
-});
-
-// get door status
-app.get("/status", checkAuth, async (req, res) => {
-  try {
-    const doorOpen = await getVisibleDoorStatus();
-    res.status(200).json({ doorOpen });
-  } catch (error) {
-    console.error("Error fetching status:", error);
-    res.status(500).send("Internal Server Error");
-  }
-});
-
-// --- Doorbell Endpoint using ntfy (with validation and rate limiting) ---
-// This endpoint is available even when authentication is required.
-const doorbellIpLast = new Map();
-let doorbellGlobalEvents = [];
-
-app.post("/ring-doorbell", async (req, res) => {
-  // Validate configuration
-  if (!NTFY_TOPIC) {
-    return res.status(503).json({
-      ok: false,
-      error: "Doorbell not configured",
-      detail: "Missing NTFY_TOPIC env var (and optional NTFY_URL)",
-    });
-  }
-
-  // Rate limit: 1 per 30s per IP and max 10 per 10 minutes globally
-  const now = Date.now();
-  const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
-  const last = doorbellIpLast.get(ip) || 0;
-  if (now - last < 30_000) {
-    return res.status(429).json({ ok: false, error: "Too many requests. Please wait a moment." });
-  }
-  // prune global window
-  doorbellGlobalEvents = doorbellGlobalEvents.filter((t) => now - t < 10 * 60_000);
-  if (doorbellGlobalEvents.length >= 10) {
-    return res.status(429).json({ ok: false, error: "Doorbell rate limited globally. Try again soon." });
-  }
-
-  // Sanitize message
-  const raw = (req.body?.message ?? "").toString();
-  let bellMessage = raw.trim();
-  if (!bellMessage) {
-    bellMessage = "Default doorbell ring: Someone rang your doorbell!";
-  }
-  bellMessage = bellMessage.replace(/[\r\n]+/g, " ").slice(0, 500);
-
-  console.log(`Sending doorbell notification via ntfy: ip=${ip}, len=${bellMessage.length}`);
-  try {
-    const url = `${NTFY_URL}/${NTFY_TOPIC}`;
-    const ntfyResponse = await axios.post(
-      url,
-      bellMessage,
-      {
-        headers: {
-          // Mirroring princeton-course-notifier: Title/Priority headers
-          Title: "Doorbell",
-          Priority: "high",
-          "Content-Type": "text/plain",
-        },
-        timeout: 10_000,
-      }
-    );
-    // update rate-limit trackers only on success
-    doorbellIpLast.set(ip, now);
-    doorbellGlobalEvents.push(now);
-
-    console.log("ntfy response summary:", {
-      status: ntfyResponse.status,
-    });
-    return res.status(200).json({ ok: true, message: "Doorbell rung successfully" });
-  } catch (error) {
-    const status = error.response?.status || 500;
-    const detail = error.response?.data || error.message;
-    console.error("Error sending doorbell notification via ntfy:", status, detail);
-    return res.status(502).json({ ok: false, error: "Failed to send notification", detail });
-  }
-});
-
-// --- Admin endpoint to toggle authRequired at runtime ---
-app.post("/admin/set-auth-required", (req, res) => {
-  const headerAuth = (req.headers["authorization"] || "").toString();
-  const bearer = headerAuth.startsWith("Bearer ") ? headerAuth.slice(7) : "";
-  const provided = (req.headers["x-admin-token"] || bearer || "").toString().trim();
-  const expected = (ADMIN_TOKEN || "").toString().trim();
-  if (!expected || provided !== expected) {
-    return res.status(403).json({ ok: false, error: "Forbidden" });
-  }
-  const enabled = req.body && typeof req.body.enabled !== "undefined" ? !!req.body.enabled : true;
-  authRequired = enabled;
-  console.log("Auth required set to:", authRequired);
-  res.json({ ok: true, authRequired });
-});
-
-// start server
-const server = app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-// increase timeouts to handle slow connections
-server.keepAliveTimeout = 61000;
-server.headersTimeout = 62000;
-
-// Periodically poll Arduino Cloud to capture out-of-band changes
-let statusPollInFlight = false;
-setInterval(async () => {
-  if (statusPollInFlight) {
+  if (!response.ok) throw new Error(`Arduino request failed (${response.status})`);
+  if (options.method === "PUT") {
+    await response.arrayBuffer();
     return;
   }
-  statusPollInFlight = true;
+  return response.json();
+}
+
+let deviceId = null;
+let liveDoorOpen = null;
+let liveUpdatedAt = null;
+let statusInFlight = null;
+let cachedStatus = null;
+let statusFetchedAt = 0;
+async function fetchDoorStatus() {
+  if (cachedStatus && Date.now() - statusFetchedAt < STATUS_POLL_INTERVAL_MS) return cachedStatus;
+  if (statusInFlight) return statusInFlight;
+  statusInFlight = (async () => {
+    const readStartedAt = Date.now();
+    if (!deviceId) {
+      const thing = await arduinoRequest(`things/${thingId}`);
+      if (!thing.device_id) throw new Error("Arduino Thing has no device");
+      deviceId = thing.device_id;
+    }
+    const [property, device] = await Promise.all([
+      liveDoorOpen === null ? arduinoRequest(`things/${thingId}/properties/${propertyId}`) : null,
+      arduinoRequest(`devices/${deviceId}`),
+    ]);
+    if (cachedStatus && statusFetchedAt > readStartedAt) return cachedStatus;
+    const online = device.device_status === "ONLINE";
+    const value = liveDoorOpen ?? property?.last_value;
+    if (typeof value !== "boolean") throw new Error("Arduino door state is unavailable");
+    cachedStatus = { doorOpen: online ? value : null, online, updatedAt: liveUpdatedAt || property?.value_updated_at || null };
+    statusFetchedAt = Date.now();
+    return cachedStatus;
+  })();
   try {
-    const latest = await fetchLatestDoorStatus();
-    if (currentDoorOpen === null) {
-      currentDoorOpen = latest;
-      broadcastStatus(currentDoorOpen);
-      return;
-    }
-    if (latest !== currentDoorOpen) {
-      // Suppress brief contradictory updates during propagation window
-      if (Date.now() < suppressContradictUntil) {
-        return;
-      }
-      currentDoorOpen = latest;
-      broadcastStatus(currentDoorOpen);
-    }
-  } catch (e) {
-    console.warn("Background status poll failed:", e.message);
+    return await statusInFlight;
   } finally {
-    statusPollInFlight = false;
+    statusInFlight = null;
   }
-}, STATUS_POLL_INTERVAL_MS);
+}
+
+const sseClients = new Map();
+function sseSend(res, data) {
+  if (!res.destroyed && !res.writableEnded) res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+let broadcastInFlight = false;
+async function broadcastStatus() {
+  if (!sseClients.size || broadcastInFlight) return;
+  broadcastInFlight = true;
+  let status;
+  try {
+    status = await fetchDoorStatus();
+  } catch (error) {
+    console.warn("Door status unavailable:", error.message);
+    status = liveDoorOpen !== null && cachedStatus ? cachedStatus : { doorOpen: null, online: false, message: "Door status unavailable" };
+  }
+  sendStatusToClients(status);
+  broadcastInFlight = false;
+}
+
+function sendStatusToClients(status) {
+  for (const [res, req] of sseClients) {
+    if (authRequired() && !authenticated(req)) {
+      sseSend(res, { authRequired: true });
+      res.end();
+    } else {
+      sseSend(res, status);
+    }
+  }
+}
+
+api.get("/events", checkAuth, (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  const keepAlive = setInterval(() => res.write(": keep-alive\n\n"), 25000);
+  sseClients.set(res, req);
+  res.on("close", () => {
+    clearInterval(keepAlive);
+    sseClients.delete(res);
+  });
+  void broadcastStatus();
+});
+
+api.get("/status", checkAuth, async (req, res, next) => {
+  try {
+    res.json(await fetchDoorStatus());
+  } catch (error) {
+    next(error);
+  }
+});
+
+let commandInFlight = false;
+async function handleDoorCommand(res, command, next) {
+  if (commandInFlight) return res.status(409).json({ ok: false, message: "A door command is already being sent" });
+  if (!commandPropertyId) return res.status(503).json({ ok: false, message: "Door controller update is not configured" });
+  commandInFlight = true;
+  try {
+    const status = await fetchDoorStatus();
+    if (!status.online) return res.status(503).json({ ok: false, message: "Door controller is offline" });
+    await arduinoRequest(`things/${thingId}/properties/${commandPropertyId}/publish`, {
+      method: "PUT", body: JSON.stringify({ value: `${command}:${Math.floor(Date.now() / 1000) + 10}:${crypto.randomUUID()}` }),
+    });
+    res.json({ ok: true, command, message: "Command sent" });
+    void broadcastStatus();
+  } catch (error) {
+    next(error);
+  } finally {
+    commandInFlight = false;
+  }
+}
+
+api.post("/command", checkAuth, (req, res, next) => {
+  const command = req.body?.command;
+  if (!["open", "close", "pulse", "force-open", "force-close"].includes(command)) {
+    return res.status(400).json({ ok: false, message: "Invalid door command" });
+  }
+  return handleDoorCommand(res, command, next);
+});
+for (const command of ["open", "close", "pulse", "force-open", "force-close"]) {
+  api.post(`/${command}`, checkAuth, (req, res, next) => handleDoorCommand(res, command, next));
+}
+api.post("/emergency-close", checkAuth, (req, res, next) => handleDoorCommand(res, "close", next));
+
+const doorbellIpLast = new Map();
+let doorbellGlobalEvents = [];
+api.post("/ring-doorbell", async (req, res, next) => {
+  if (!NTFY_TOPIC && !smsConfigured) return res.status(503).json({ ok: false, message: "Doorbell is not configured" });
+  const now = Date.now();
+  for (const [ip, time] of doorbellIpLast) {
+    if (now - time >= 30000) doorbellIpLast.delete(ip);
+  }
+  doorbellGlobalEvents = doorbellGlobalEvents.filter(time => now - time < 600000);
+  if (doorbellIpLast.has(req.ip) || doorbellGlobalEvents.length >= 10) {
+    return res.status(429).json({ ok: false, message: "Please wait before ringing again" });
+  }
+  const message = req.body?.message;
+  if (message !== undefined && typeof message !== "string") {
+    return res.status(400).json({ ok: false, message: "Message must be text" });
+  }
+  doorbellIpLast.set(req.ip, now);
+  doorbellGlobalEvents.push(now);
+  try {
+    const text = (message?.trim() || "Someone rang your doorbell").replace(/[\r\n]+/g, " ").slice(0, 240);
+    const response = await fetch(NTFY_TOPIC ? `${NTFY_URL}/${NTFY_TOPIC}` : `${SMS_URL}/sms/2/text/advanced`, {
+      method: "POST",
+      headers: NTFY_TOPIC
+        ? { Title: "Doorbell", Priority: "high", "Content-Type": "text/plain" }
+        : { Authorization: `App ${SMS_KEY}`, "Content-Type": "application/json" },
+      body: NTFY_TOPIC ? text : JSON.stringify({ messages: [{ from: SMS_FROM, destinations: [{ to: SMS_TO }], text }] }),
+      signal: AbortSignal.timeout(ARDUINO_HTTP_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`Doorbell delivery failed (${response.status})`);
+    await response.arrayBuffer();
+    res.json({ ok: true, message: "Doorbell rung" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+api.post("/admin/set-auth-required", (req, res) => {
+  const supplied = (req.headers["x-admin-token"] || req.headers.authorization?.replace(/^Bearer\s+/i, "") || "").trim();
+  if (!ADMIN_TOKEN || supplied !== ADMIN_TOKEN) return res.status(403).json({ ok: false, message: "Forbidden" });
+  const enabled = req.body?.enabled;
+  if (typeof enabled !== "boolean" && enabled !== null) {
+    return res.status(400).json({ ok: false, message: "Enabled must be true, false, or null" });
+  }
+  authOverride = enabled;
+  res.json({ ok: true, authRequired: authRequired() });
+  void broadcastStatus();
+});
+
+app.use((req, res) => res.status(404).json({ ok: false, message: "Endpoint not found" }));
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  console.error("Request failed:", error.message);
+  const status = error.status === 400 || error.status === 413 ? error.status : 502;
+  const message = status === 400 ? "Invalid JSON request" : status === 413 ? "Request is too large" : "Door service unavailable. Check the controller before trying again.";
+  res.status(status).json({ ok: false, message });
+});
+
+export function startServer(port = process.env.PORT || 3000) {
+  for (const [name, value] of Object.entries({ AUTH_TOKEN_TTL_SECONDS, ARDUINO_HTTP_TIMEOUT_MS, STATUS_POLL_INTERVAL_MS })) {
+    if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer`);
+  }
+  if (!["true", "false", "scheduled"].includes(AUTH_MODE)) throw new Error("AUTH_REQUIRED must be true, false, or scheduled");
+  const server = app.listen(port, process.env.HOST || "127.0.0.1");
+  const poll = setInterval(() => void broadcastStatus(), STATUS_POLL_INTERVAL_MS);
+  server.on("close", () => clearInterval(poll));
+  server.keepAliveTimeout = 61000;
+  server.headersTimeout = 62000;
+  return server;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const missing = ["THING_ID", "PROPERTY_ID", "COMMAND_PROPERTY_ID", "CLIENT_ID", "CLIENT_SECRET", "PASSWORD"].filter(name => !process.env[name]);
+  if (!SECRET_KEY) missing.push("SECRET_KEY");
+  if (missing.length) throw new Error(`Missing configuration: ${missing.join(", ")}`);
+  const server = startServer();
+  const stopLiveStatus = startArduinoStatus(thingId, getAccessToken, value => {
+    console.log("Live door state:", value);
+    liveDoorOpen = value;
+    liveUpdatedAt = new Date().toISOString();
+    cachedStatus = { doorOpen: value, online: true, updatedAt: liveUpdatedAt };
+    statusFetchedAt = Date.now();
+    sendStatusToClients(cachedStatus);
+  }, () => {
+    liveDoorOpen = null;
+    liveUpdatedAt = null;
+    cachedStatus = null;
+  });
+  server.on("listening", () => console.log(`Door server listening on port ${server.address().port}`));
+  const shutdown = () => {
+    stopLiveStatus();
+    for (const res of sseClients.keys()) res.end();
+    server.close();
+    setTimeout(() => process.exit(1), 20000).unref();
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}

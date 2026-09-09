@@ -37,8 +37,7 @@ out
 .env.*
 !.env.example
 
-# Lockfiles (intentionally not tracked)
-package-lock.json
+# Alternative package manager lockfiles
 yarn.lock
 pnpm-lock.yaml
 
@@ -69,3 +68,8 @@ pnpm-lock.yaml
 # Misc
 *.tgz
 *.tar.gz
+
+# Firmware credentials and local project context
+arduino_secrets.h
+.agents/
+.impeccable.md

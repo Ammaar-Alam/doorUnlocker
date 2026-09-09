@@ -1,431 +1,204 @@
-// redirect to HTTPS if accessed over HTTP
-// not necessary, but google crawler/url inspect is slow to update cache
-if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.protocol !== "https:") {
-  window.location.href =
-    "https://" + window.location.hostname + window.location.pathname + window.location.search;
+if (!['localhost', '127.0.0.1'].includes(location.hostname) && location.protocol !== 'https:') {
+  location.replace('https://' + location.host + location.pathname + location.search);
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  let authRequired = true; // assume auth is required by default
-  let sse;
-  let statusPollTimer = null;
-  let controlsLocked = false;
-  let controlsBusy = false;
-  let pendingDoorOpen = null;
-  let pendingDoorExpiresAt = 0;
-  let pendingDoorTimer = null;
-  let lastConfirmedDoorOpen = null;
-  let lastCommandId = 0;
-  let lastStatusRequestId = 0;
-  const PENDING_DOOR_WINDOW_MS = 7000;
+document.addEventListener("DOMContentLoaded", () => {
+  const doorSwitch = document.getElementById("doorSwitch");
+  const openButton = document.getElementById("manualOpenButton");
+  const closeButton = document.getElementById("manualCloseButton");
+  const feedback = document.getElementById("control-feedback");
+  let locked = true;
+  let busy = false;
+  let doorOpen = null;
+  let sse = null;
+  let fallbackTimer = null;
+  let statusRevision = 0;
 
-  function syncControlsEnabled() {
-    const enabled = !controlsLocked && !controlsBusy;
-    const doorSwitch = document.getElementById("doorSwitch");
-    const openBtn = document.getElementById("manualOpenButton");
-    const closeBtn = document.getElementById("manualCloseButton");
-    [doorSwitch, openBtn, closeBtn].forEach(el => {
-      if (!el) return;
-      el.disabled = !enabled;
-      if (!enabled) {
-        el.setAttribute('aria-disabled', 'true');
-        el.tabIndex = -1;
-      } else {
-        el.removeAttribute('aria-disabled');
-        el.tabIndex = 0;
-      }
+  function syncControls() {
+    for (const control of [doorSwitch, openButton, closeButton]) {
+      control.disabled = locked || busy || doorOpen === null;
+    }
+    document.querySelector('.control-panel').classList.toggle('locked', locked);
+    document.getElementById('controls-overlay').style.display = locked ? 'flex' : 'none';
+    document.getElementById('login-section').style.display = locked ? 'block' : 'none';
+  }
+
+  function showError(message) {
+    feedback.textContent = message;
+    feedback.hidden = !message;
+  }
+
+  function applyDoorState(data) {
+    doorOpen = data.online && typeof data.doorOpen === 'boolean' ? data.doorOpen : null;
+    doorSwitch.indeterminate = doorOpen === null;
+    doorSwitch.checked = doorOpen === true;
+    document.getElementById('open').style.color = doorOpen === true ? '#FF5E55' : '#888';
+    document.getElementById('closed').style.color = doorOpen === false ? '#4CAF50' : '#888';
+    document.getElementById('connection-status').textContent = doorOpen === null ? 'Status unavailable' : '';
+    syncControls();
+  }
+
+  async function request(path, options = {}) {
+    const response = await fetch(path, {
+      ...options, headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(15000),
     });
-  }
-
-  function updateLockUI(locked) {
-    controlsLocked = !!locked;
-    const panel = document.querySelector('.control-panel');
-    const overlay = document.getElementById('controls-overlay');
-    if (panel) panel.classList.toggle('locked', controlsLocked);
-    if (overlay) overlay.style.display = controlsLocked ? 'flex' : 'none';
-    syncControlsEnabled();
-  }
-
-  function setControlsBusy(busy) {
-    controlsBusy = !!busy;
-    syncControlsEnabled();
-  }
-
-  function ensureStatusPolling() {
-    if (statusPollTimer) {
-      return;
-    }
-    statusPollTimer = setInterval(getDoorStatus, 4000);
-  }
-
-  function stopStatusPolling() {
-    if (!statusPollTimer) {
-      return;
-    }
-    clearInterval(statusPollTimer);
-    statusPollTimer = null;
-  }
-
-  function clearPendingDoorState() {
-    if (pendingDoorTimer) {
-      clearTimeout(pendingDoorTimer);
-      pendingDoorTimer = null;
-    }
-    pendingDoorOpen = null;
-    pendingDoorExpiresAt = 0;
-    setControlsBusy(false);
-  }
-
-  function hasPendingDoorState() {
-    if (pendingDoorOpen === null) {
-      return false;
-    }
-    if (Date.now() >= pendingDoorExpiresAt) {
-      clearPendingDoorState();
-      return false;
-    }
-    return true;
-  }
-
-  function beginPendingDoorState(nextDoorOpen) {
-    if (pendingDoorTimer) {
-      clearTimeout(pendingDoorTimer);
-    }
-    pendingDoorOpen = !!nextDoorOpen;
-    pendingDoorExpiresAt = Date.now() + PENDING_DOOR_WINDOW_MS;
-    setControlsBusy(true);
-    pendingDoorTimer = window.setTimeout(() => {
-      clearPendingDoorState();
-      getDoorStatus();
-    }, PENDING_DOOR_WINDOW_MS);
-  }
-
-  function applyDoorState(isOpen, source = "server") {
-    const nextDoorOpen = !!isOpen;
-
-    if (source === "local") {
-      setToggle(nextDoorOpen);
-      return;
-    }
-
-    if (hasPendingDoorState()) {
-      if (nextDoorOpen === pendingDoorOpen) {
-        lastConfirmedDoorOpen = nextDoorOpen;
-        clearPendingDoorState();
-        setToggle(nextDoorOpen);
-        return;
+    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401) {
+        locked = true;
+        stopEvents();
+        syncControls();
       }
-
-      if (source !== "local") {
-        console.warn(`Ignoring stale ${source} door state`, {
-          pendingDoorOpen,
-          receivedDoorOpen: nextDoorOpen,
-        });
-        return;
-      }
+      throw new Error(data.message || 'Request failed');
     }
-
-    lastConfirmedDoorOpen = nextDoorOpen;
-    setToggle(nextDoorOpen);
+    return data;
   }
 
-  function revertPendingDoorState() {
-    clearPendingDoorState();
-    if (lastConfirmedDoorOpen === null) {
-      getDoorStatus();
-      return;
-    }
-    setToggle(lastConfirmedDoorOpen);
+  function stopEvents() {
+    sse?.close();
+    sse = null;
+    clearInterval(fallbackTimer);
+    fallbackTimer = null;
   }
 
-  function startEventStream() {
+  async function getDoorStatus() {
+    const revision = ++statusRevision;
     try {
-      if (sse) {
-        sse.close();
-      }
-      sse = new EventSource("/events");
-      sse.onopen = () => {
-        stopStatusPolling();
-      };
-      sse.onmessage = (event) => {
+      const data = await request('/status');
+      if (revision === statusRevision) applyDoorState(data);
+    } catch (error) {
+      if (revision === statusRevision) applyDoorState({});
+    }
+  }
+
+  function startEvents() {
+    if (sse || document.hidden) return;
+    if (!fallbackTimer) fallbackTimer = setInterval(getDoorStatus, 4000);
+    try {
+      sse = new EventSource('/events');
+      sse.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
-          if (typeof data.doorOpen === "boolean") {
-            applyDoorState(data.doorOpen, "sse");
+          if (data.authRequired) {
+            locked = true;
+            stopEvents();
+            syncControls();
+            return;
           }
-        } catch (e) {
-          console.warn("Bad SSE payload:", e);
+          clearInterval(fallbackTimer);
+          fallbackTimer = null;
+          ++statusRevision;
+          applyDoorState(data);
+        } catch {
+          applyDoorState({});
         }
       };
       sse.onerror = () => {
-        ensureStatusPolling();
-        console.warn("SSE connection error; will retry automatically.");
+        ++statusRevision;
+        applyDoorState({});
+        if (!fallbackTimer) fallbackTimer = setInterval(getDoorStatus, 4000);
       };
-    } catch (e) {
-      console.warn("SSE unsupported or failed; falling back to polling.");
-      ensureStatusPolling();
+    } catch {
+      sse = null;
     }
   }
 
-  async function handleLogin(event) {
+  async function refreshAuth() {
+    if (document.hidden) return;
+    try {
+      const data = await request('/auth-status');
+      locked = data.authRequired && !data.authenticated;
+      syncControls();
+      if (locked) stopEvents();
+      else startEvents();
+    } catch {
+      locked = true;
+      stopEvents();
+      applyDoorState({});
+      showError('Unable to connect. Please try again.');
+    }
+  }
+
+  document.getElementById('login-form').addEventListener('submit', async event => {
     event.preventDefault();
-    const password = document.getElementById("password").value;
+    const errorLabel = document.getElementById('login-error');
+    errorLabel.style.display = 'none';
     try {
-      const response = await fetch("/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("authToken", data.token);
-        document.querySelector("#login-section").style.display = "none";
-        document.querySelector("#doorbell-section").style.display = "block";
-        updateLockUI(false);
-        startEventStream();
-        getDoorStatus();
-      } else {
-        document.getElementById("login-error").style.display = "block";
-      }
+      await request('/login', { method: 'POST', body: JSON.stringify({ password: document.getElementById('password').value }) });
+      document.getElementById('password').value = '';
+      localStorage.removeItem('authToken');
+      showError('');
+      await refreshAuth();
     } catch (error) {
-      console.error("Error during login request:", error);
-      document.getElementById("login-error").style.display = "block";
+      errorLabel.textContent = error.message;
+      errorLabel.style.display = 'block';
     }
-  }
-
-  document.getElementById("login-form").addEventListener("submit", handleLogin);
-
-  // mobile nav toggle
-  const navToggle = document.querySelector('.nav-toggle');
-  const navLinks = document.querySelector('.nav-links');
-  if (navToggle && navLinks) {
-    const setExpanded = () => navToggle.setAttribute('aria-expanded', navLinks.classList.contains('open') ? 'true' : 'false');
-    navToggle.addEventListener('click', () => {
-      navLinks.classList.toggle('open');
-      setExpanded();
-    });
-    // close nav on outside click
-    document.addEventListener('click', (e) => {
-      if (!navLinks.contains(e.target) && !navToggle.contains(e.target)) {
-        navLinks.classList.remove('open');
-        setExpanded();
-      }
-    });
-    setExpanded();
-  }
-
-  // check if authentication is required
-  fetch("/auth-status")
-    .then((response) => response.json())
-    .then((data) => {
-      authRequired = data.authRequired; // store the authRequired status
-      if (!authRequired) {
-        // if auth isn't required, hide login and enable controls
-        document.querySelector("#login-section").style.display = "none";
-        document.querySelector("#doorbell-section").style.display = "block";
-        updateLockUI(false);
-        startEventStream();
-        getDoorStatus();
-      } else {
-        // auth required: keep panel visible but locked
-        updateLockUI(true);
-        document.querySelector("#doorbell-section").style.display = "block";
-      }
-    })
-    .catch((error) => console.error("Error checking auth status:", error));
-
-  // fetch door status from server
-  async function getDoorStatus() {
-    const requestId = ++lastStatusRequestId;
-    try {
-      const headers = { "Content-Type": "application/json" };
-      if (authRequired) {
-        const token = localStorage.getItem("authToken");
-        if (token) {
-          headers["Authorization"] = token;
-        }
-      }
-      const response = await fetch("/status", {
-        method: "GET",
-        headers,
-      });
-      if (!response.ok) {
-        console.error("Failed to get door status:", await response.text());
-        return;
-      }
-      const data = await response.json();
-      if (requestId !== lastStatusRequestId) {
-        return;
-      }
-      applyDoorState(data.doorOpen, "status");
-    } catch (error) {
-      console.error("Error fetching door status:", error);
-    }
-  }
-
-  // set toggle state based on doorOpen boolean
-  function setToggle(isOpen) {
-    const doorSwitch = document.getElementById("doorSwitch");
-    doorSwitch.checked = !!isOpen;
-    updateStatus();
-  }
+  });
 
   async function sendCommand(command) {
-    const commandId = ++lastCommandId;
+    if (locked || busy || doorOpen === null) return;
+    busy = true;
+    showError('');
+    syncControls();
     try {
-      const headers = { "Content-Type": "application/json" };
-      if (authRequired) {
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-          console.error("No auth token found. Please log in again.");
-          revertPendingDoorState();
-          return;
-        }
-        headers["Authorization"] = token;
-      }
-
-      const response = await fetch("/command", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ command }),
-      });
-
-      if (!response.ok) {
-        const errorDetail = await response.text();
-        console.error("Failed to send command:", errorDetail);
-        if (commandId === lastCommandId) {
-          revertPendingDoorState();
-        }
-        return;
-      }
-      console.log(await response.text());
-
-      window.setTimeout(() => {
-        if (commandId === lastCommandId && hasPendingDoorState()) {
-          getDoorStatus();
-        }
-      }, 1500);
-
-      window.setTimeout(() => {
-        if (commandId === lastCommandId && hasPendingDoorState()) {
-          getDoorStatus();
-        }
-      }, 4500);
+      await request('/command', { method: 'POST', body: JSON.stringify({ command }) });
+      await getDoorStatus();
     } catch (error) {
-      console.error("Error during the request:", error);
-      if (commandId === lastCommandId) {
-        revertPendingDoorState();
-      }
+      showError(error.message);
+    } finally {
+      busy = false;
+      syncControls();
     }
   }
 
-  function updateStatus() {
-    const doorSwitch = document.getElementById("doorSwitch");
-    const openStatus = document.getElementById("open");
-    const closedStatus = document.getElementById("closed");
+  doorSwitch.addEventListener('change', () => {
+    const command = doorSwitch.checked ? 'open' : 'close';
+    doorSwitch.checked = doorOpen === true;
+    void sendCommand(command);
+  });
+  openButton.addEventListener('click', () => sendCommand('force-open'));
+  closeButton.addEventListener('click', () => sendCommand('force-close'));
 
-    if (doorSwitch.checked) {
-      openStatus.style.color = "rgba(255, 94, 85, 1)";
-      closedStatus.style.color = "#888";
-    } else {
-      closedStatus.style.color = "rgba(76, 175, 80, 1)";
-      openStatus.style.color = "#888";
+  const navToggle = document.querySelector('.nav-toggle');
+  const navLinks = document.querySelector('.nav-links');
+  navToggle.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', String(navLinks.classList.contains('open')));
+  });
+  document.addEventListener('click', event => {
+    if (!navLinks.contains(event.target) && !navToggle.contains(event.target)) {
+      navLinks.classList.remove('open');
+      navToggle.setAttribute('aria-expanded', 'false');
     }
-  }
+  });
 
-  function toggleSwitch() {
-    const doorSwitch = document.getElementById("doorSwitch");
-    const nextDoorOpen = doorSwitch.checked;
-    beginPendingDoorState(nextDoorOpen);
-    sendCommand(nextDoorOpen ? "open" : "close");
-    applyDoorState(nextDoorOpen, "local");
-  }
-
-  function manualOpen() {
-    beginPendingDoorState(true);
-    sendCommand("open");
-    applyDoorState(true, "local");
-  }
-
-  function manualClose() {
-    beginPendingDoorState(false);
-    sendCommand("close");
-    applyDoorState(false, "local");
-  }
-
-  function ringDoorbell() {
-    const doorbellInput = document.getElementById("doorbellMessage");
-    const message = doorbellInput.value || "Default doorbell ring: Someone rang your doorbell!";
-    const token = localStorage.getItem("authToken");
-    let headers = { "Content-Type": "application/json" };
-    if (authRequired && token) {
-      headers["Authorization"] = token;
+  const bellButton = document.getElementById('ringDoorbellButton');
+  bellButton.addEventListener('click', async () => {
+    const input = document.getElementById('doorbellMessage');
+    const result = document.getElementById('doorbell-feedback');
+    bellButton.disabled = true;
+    result.style.display = 'block';
+    try {
+      const data = await request('/ring-doorbell', { method: 'POST', body: JSON.stringify({ message: input.value }) });
+      result.textContent = data.message;
+      result.style.color = '#4CAF50';
+      input.value = '';
+    } catch (error) {
+      result.textContent = error.message;
+      result.style.color = '#FF5E55';
+    } finally {
+      bellButton.disabled = false;
     }
-    const btn = document.getElementById("ringDoorbellButton");
-    const feedback = document.getElementById("doorbell-feedback");
-    const setFeedback = (text, ok=true) => {
-      if (!feedback) return;
-      feedback.textContent = text;
-      feedback.style.display = "block";
-      feedback.style.color = ok ? "#4CAF50" : "#FF5E55";
-    };
-    btn.disabled = true;
-    const prevLabel = btn.textContent;
-    btn.textContent = "Sending...";
+  });
 
-    fetch("/ring-doorbell", {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify({ message: message })
-    })
-    .then(async response => {
-      let data;
-      try { data = await response.json(); } catch { data = {}; }
-      if (response.ok && data.ok) {
-        setFeedback("Doorbell rung successfully!", true);
-        doorbellInput.value = "";
-      } else {
-        const errMsg = data?.error || `Failed (${response.status})`;
-        setFeedback(errMsg, false);
-      }
-    })
-    .catch(error => {
-      console.error("Error sending doorbell request:", error);
-      setFeedback("Network error sending doorbell.", false);
-    })
-    .finally(() => {
-      btn.disabled = false;
-      btn.textContent = prevLabel;
-      setTimeout(() => {
-        if (feedback) feedback.style.display = "none";
-      }, 4000);
-    });
-  }
-
-  const doorSwitch = document.getElementById("doorSwitch");
-  if (doorSwitch) {
-    doorSwitch.addEventListener("change", toggleSwitch);
-  } else {
-    console.error("doorSwitch element not found");
-  }
-
-  const openButton = document.getElementById("manualOpenButton");
-  const closeButton = document.getElementById("manualCloseButton");
-  if (openButton) {
-    openButton.onclick = manualOpen;
-  }
-  if (closeButton) {
-    closeButton.onclick = manualClose;
-  }
-  
-  const ringDoorbellButton = document.getElementById("ringDoorbellButton");
-  if (ringDoorbellButton) {
-    ringDoorbellButton.onclick = ringDoorbell;
-  }
-
-  // ensure doorbell section is always visible 
-  document.querySelector("#doorbell-section").style.display = "block";
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopEvents();
+    else void refreshAuth();
+  });
+  window.addEventListener('pagehide', stopEvents);
+  window.addEventListener('pageshow', refreshAuth);
+  setInterval(refreshAuth, 30000);
+  syncControls();
+  void refreshAuth();
 });
