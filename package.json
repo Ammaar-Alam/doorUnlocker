@@ -5,6 +5,7 @@
   "main": "server.mjs",
   "scripts": {
     "start": "node server.mjs",
+    "preview": "node scripts/preview.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "type": "module",
@@ -14,7 +15,8 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "mqtt": "^5.15.2"
+    "mqtt": "^5.15.2",
+    "three": "0.186.0"
   },
   "engines": {
     "node": "22.x"

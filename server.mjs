@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-dotenv.config();
+dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" });
 
 export const app = express();
 const api = express.Router();
@@ -42,6 +42,12 @@ export function authRequired(now = new Date()) {
 
 app.set("trust proxy", 1);
 app.use(express.static(fileURLToPath(new URL("./public", import.meta.url))));
+app.use("/vendor/three", express.static(fileURLToPath(new URL("./node_modules/three/build", import.meta.url))));
+for (const path of ["loaders/STLLoader.js", "controls/OrbitControls.js"]) {
+  app.get(`/vendor/${path}`, (req, res) => res.sendFile(fileURLToPath(new URL(`./node_modules/three/examples/jsm/${path}`, import.meta.url))));
+}
+app.get("/models/spindle.stl", (req, res) => res.sendFile(fileURLToPath(new URL("./hardware/models/motor-spindle-final-optimized.stl", import.meta.url))));
+app.get("/models/base.stl", (req, res) => res.sendFile(fileURLToPath(new URL("./hardware/models/base.stl", import.meta.url))));
 app.use(express.json({ limit: "16kb" }));
 app.use(cookieParser());
 app.use(["/api", "/"], api);
@@ -73,7 +79,7 @@ function checkAuth(req, res, next) {
 }
 
 api.get("/auth-status", (req, res) => {
-  res.json({ authRequired: authRequired(), authenticated: authenticated(req) });
+  res.json({ authRequired: authRequired(), authenticated: authenticated(req), preview: app.locals.preview === true });
 });
 
 api.post("/login", (req, res) => {

@@ -2,118 +2,113 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ammaar's Dorm Controls</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="script.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f6f8" />
+  <meta name="description" content="Live control and an interactive view of Ammaar's motorized door handle." />
+  <title>Door · Ammaar Alam</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Avenir:wght@300;400;700&family=Roboto:wght@300;400;700&display=swap"
-    rel="stylesheet"
-  />
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-  />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <script type="importmap">{"imports":{"three":"/vendor/three/three.module.js"}}</script>
+  <script src="/script.js" defer></script>
+  <script type="module" src="/mechanism.js"></script>
 </head>
-<body>
-  <header class="appbar">
-    <div class="brand">
-      <i class="fas fa-door-open"></i>
-      <span class="brand-title">Ammaar's Dorm Room Controls</span>
-    </div>
-    <button class="nav-toggle" aria-label="Open navigation">
-      <i class="fas fa-bars"></i>
-    </button>
-    <nav class="nav-links">
-      <a href="https://ammaaralam.com" target="_blank" aria-label="Portfolio">
-        <i class="fas fa-laptop"></i><span class="link-text"> Coding Portfolio / Personal Site</span>
-      </a>
-      <a href="https://github.com/Ammaar-Alam/doorUnlocker" target="_blank" aria-label="GitHub">
-        <i class="fab fa-github"></i><span class="link-text"> GitHub</span>
-      </a>
-      <a href="https://www.linkedin.com/in/Ammaar-Alam" target="_blank" aria-label="LinkedIn">
-        <i class="fab fa-linkedin"></i><span class="link-text"> LinkedIn</span>
-      </a>
-      <a href="https://ammaar.xyz" target="_blank" aria-label="Photography">
-        <i class="fas fa-camera"></i><span class="link-text"> Photography</span>
-      </a>
+<body data-door-state="unknown">
+  <a class="skip-link" href="#door-control">Skip to controls</a>
+  <header class="menubar">
+    <a class="identity" href="https://ammaaralam.com" aria-label="Ammaar Alam's personal site">
+      <img src="/assets/favicon.png" width="27" height="27" alt="" />
+      <span>Ammaar Alam</span>
+    </a>
+    <span class="menubar-divider" aria-hidden="true"></span>
+    <span class="app-name">Door</span>
+    <nav aria-label="Project links">
+      <a href="https://github.com/Ammaar-Alam/doorUnlocker" target="_blank" rel="noopener">Source <span aria-hidden="true">↗</span></a>
+      <a href="https://ammaaralam.com" class="back-link">Back to alamOS <span aria-hidden="true">↗</span></a>
     </nav>
   </header>
-  <main class="dashboard-grid">
-    <!-- Door Controls -->
-    <section class="control-panel card-section grid-status">
-      <h2 class="section-title">Door Status</h2>
-      <!-- Lock overlay (shown when auth required and not logged in) -->
-      <div id="controls-overlay" class="lock-overlay" style="display: none;">
-        <i class="fas fa-lock"></i>
-        <span>Login to control</span>
+
+  <main class="workspace">
+    <section class="instrument" aria-label="Door control">
+      <div class="window-bar">
+        <div class="window-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <h1 class="window-title">Door control</h1>
+        <span id="connection-status" class="connection" role="status">Connecting</span>
       </div>
-      <div class="toggle-container">
-        <span class="status-text" id="closed">CLOSED</span>
-        <label class="switch">
-          <input type="checkbox" id="doorSwitch" aria-label="Open door" disabled />
-          <span class="slider round"></span>
-        </label>
-        <span class="status-text" id="open">OPEN</span>
+      <div class="instrument-body">
+        <figure class="mechanism-panel">
+          <div class="drawing-heading"><span>THE MECHANISM</span><span class="drawing-view">ASSEMBLED VIEW</span></div>
+          <div id="mechanism-view" class="mechanism-view" aria-label="Interactive 3D diagram of the complete door assembly, electronics, and power connections">
+            <canvas id="mechanism-canvas" aria-label="Motor assembly. Drag to rotate the view." tabindex="0"></canvas>
+            <svg class="annotations" id="annotations" aria-hidden="true"></svg>
+            <div id="model-loading" class="model-loading" role="status"><img src="/assets/favicon.png" width="44" height="44" alt="" /><span>Door</span><span class="load-track" aria-hidden="true"></span></div>
+            <p id="model-error" class="model-error" hidden>The diagram couldn’t load. Door controls are still available.</p>
+          </div>
+          <div id="part-details" class="part-details" inert>
+            <div class="part-details-inner">
+              <section class="part-description" aria-live="polite">
+                <div class="part-copy">
+                  <div class="part-description-heading"><h3 id="part-name"></h3><button id="close-part" type="button" class="text-button" aria-label="Close part details">×</button></div>
+                  <p id="part-description"></p>
+                </div>
+                <div id="wiring-detail" hidden>
+                  <svg id="wiring-diagram" class="wiring-diagram" viewBox="0 0 248 128" role="img" aria-label="Nano ESP32 D2 to IN1, D3 to IN2, D9 to ENA, and ground to driver ground"></svg>
+                  <div class="power-connections"><span>USB-C <span aria-hidden="true">→</span> Nano</span><span>Barrel <span aria-hidden="true">→</span> Driver</span></div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <figcaption class="drawing-footer">
+            <select id="part-select" aria-label="Inspect a part"><option value="">Explore parts</option></select>
+            <div class="view-actions"><button id="reset-view" class="text-button" type="button">Reset view</button><a href="/models/spindle.stl" download="motor-spindle.stl">Print file <span aria-hidden="true">↓</span></a></div>
+          </figcaption>
+        </figure>
+
+        <div class="control-panel" id="door-control">
+          <div class="control-heading"><span class="eyebrow">THE DOOR</span><span id="preview-badge" class="preview-badge" hidden>Local preview</span></div>
+          <div class="door-state" aria-live="polite" aria-atomic="true"><span class="state-light" aria-hidden="true"></span><h2 id="door-state">Connecting</h2></div>
+          <p id="state-detail" class="state-detail">Waiting for the controller.</p>
+
+          <button id="doorToggle" class="door-toggle" type="button" disabled aria-label="Open door">
+            <svg viewBox="0 0 24 24" class="door-icon" aria-hidden="true"><path class="door-frame" d="M5 21V3h14v18M3 21h18"/><path class="door-leaf" d="M7 21V5h10v16"/><path d="M13.5 13h.5"/></svg>
+            <span id="toggle-label">Open door</span><svg class="action-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>
+          </button>
+          <p id="control-feedback" class="feedback error-text" role="alert" hidden></p>
+
+          <section id="login-section" class="login-section" hidden aria-label="Door access">
+            <p>A password is needed at night.</p>
+            <form id="login-form" class="inline-form">
+              <input type="password" id="password" aria-label="Password" autocomplete="current-password" placeholder="Password" required />
+              <button type="submit" class="small-button">Unlock</button>
+            </form>
+            <p id="login-error" class="error-text" role="alert" hidden></p>
+          </section>
+
+          <div class="secondary-controls">
+            <details class="doorbell-details" name="door-tools">
+              <summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span>Ring the bell</span><span class="disclosure-arrow" aria-hidden="true">+</span></summary>
+              <form id="doorbell-form" class="bell-form"><label class="sr-only" for="doorbellMessage">Optional message</label><input id="doorbellMessage" type="text" maxlength="240" placeholder="Leave a message (optional)" /><button id="ringDoorbellButton" class="small-button" type="submit">Ring bell</button></form>
+              <p id="doorbell-feedback" class="feedback" role="status" hidden></p>
+            </details>
+            <details class="adjustment-details" name="door-tools">
+              <summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg><span>Adjust the string</span><span class="disclosure-arrow" aria-hidden="true">+</span></summary>
+              <p>Run an extra stroke to adjust tension.</p>
+              <div class="force-buttons"><button id="manualOpenButton" class="small-button" type="button" disabled>Force open</button><button id="manualCloseButton" class="small-button" type="button" disabled>Force close</button></div>
+            </details>
+          </div>
+          <div class="access-note"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 9V6a5 5 0 0 1 10 0v3M4 9h12v9H4z"/></svg><span>Password protected<br /><span>Midnight–8am · New York</span></span></div>
+        </div>
       </div>
-      <div class="manual-buttons-container">
-        <button id="manualOpenButton" class="manual-btn open-btn" disabled>
-          Force Open
-        </button>
-        <button id="manualCloseButton" class="manual-btn close-btn" disabled>
-          Force Close
-        </button>
-      </div>
-      <p id="connection-status" class="note-text" role="status">Status unavailable</p>
-      <p id="control-feedback" class="error-text" role="alert" hidden></p>
-      <p class="note-text">
-        <i>
-          PS: i know my friends, and to avoid getting kidnapped in the middle of
-          the night, password auth is enabled automatically at night or when i'm
-          gone for days :P
-        </i>
-      </p>
     </section>
 
-    <!-- Doorbell card -->
-    <section id="doorbell-section" class="card-section compact-card grid-doorbell">
-      <h2 class="section-title">Ring Doorbell (Send me a Text)</h2>
-      <div class="ctr-row">
-        <input type="text" id="doorbellMessage" class="styled-input" placeholder="Enter custom message (optional)" />
-        <button id="ringDoorbellButton" class="styled-button gradient-btn">Ring Doorbell</button>
-      </div>
-      <p id="doorbell-feedback" class="note-text" style="display:none; margin-top:8px;"></p>
-    </section>
-
-    <!-- Login card -->
-    <section id="login-section" class="card-section compact-card grid-login">
-      <h2 class="section-title">Login</h2>
-      <form id="login-form" class="ctr-row">
-        <input type="password" id="password" aria-label="Password" autocomplete="current-password" class="styled-input" placeholder="Enter password" required />
-        <button type="submit" class="styled-button gradient-btn">Login</button>
-      </form>
-      <p id="login-error" class="error-text" style="display: none;">Invalid password. Please try again.</p>
-    </section>
-
-    <!-- Info Section -->
-    <section class="info card-section grid-about">
-      <h2 class="section-title">About This Project</h2>
-      <details class="about-details" open>
-        <summary class="about-summary">Overview</summary>
-        <p>
-          This is a personal project I worked on over the summer. The switch at the top really does open or close my door; it sends a command to my proxy server which routes that command to the Arduino IoT cloud server, and then the Arduino is connected to a motor driver and DC motor that reels a fishing line around my door handle.
-        </p>
-        <p>
-          For now, I don't plan to add more automation. This project was made to allow my girlfriend full access to my room w/o needing a prox, and partly by my real problem of locking myself out frequently. So, it was fun to learn about Arduinos and circuitry along the way.
-        </p>
-        <p class="disclaimer"><i>All the parts I used, including 3D-printed components and code, are open source on the Github Repo. Feel free to try making one yourself!</i></p>
-      </details>
-    </section>
+    <footer class="page-footer">
+      <details class="project-details"><summary>About the build <span aria-hidden="true">+</span></summary><div><p>A small gearmotor winds fishing line around a custom printed spindle, pulling the handle open. Reverse the motor and the handle releases.</p><p>The diagram follows the controller’s reported position. The mechanism has no position sensor, so it doesn’t confirm whether the physical door is shut.</p><a href="https://github.com/Ammaar-Alam/doorUnlocker" target="_blank" rel="noopener">Explore the build ↗</a></div></details>
+    </footer>
   </main>
-  <footer>
-    <p>© 2024–25 Ammaar Alam. All rights reserved.</p>
-  </footer>
+  <noscript><p class="noscript-message">JavaScript is needed to connect to the door.</p></noscript>
 </body>
 </html>

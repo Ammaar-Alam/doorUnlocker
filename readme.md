@@ -54,3 +54,11 @@ The calibrated sketch and wiring are in [firmware/](firmware/README.md). The [pr
 The application is one Node process; it does not need a separate worker or database. [Hosting instructions](docs/HOSTING.md) describe an isolated service on an existing Linux machine, with memory and CPU limits and HTTPS through Caddy. Arduino status polling runs only while browsers are watching.
 
 [MIT license](LICENSE)
+
+## Visual preview
+
+```sh
+npm run preview
+```
+
+Open `http://localhost:3107` to inspect the interface and animated mechanism with a simulated controller. This runs without credentials and never connects to the hardware. The spindle and mounting base are rendered from their original STLs. Select a part to inspect it; the electronics include a wiring diagram matched to the firmware. Motion illustrates reported handle states rather than measured shaft position.
