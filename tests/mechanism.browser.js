@@ -169,6 +169,13 @@ async function checkMechanism(userPage) {
     await page.locator('canvas').press('Home');
     await page.waitForTimeout(100);
     if (Math.abs(await zoomDistance() - overviewDistance) > .1) errors.push('Embedded preview does not reset its zoom');
+    for (const key of ['+', '=']) {
+      await page.locator('canvas').press(key);
+      await page.waitForTimeout(100);
+      if (await zoomDistance() < overviewDistance * 1.1) errors.push(`Embedded preview does not zoom in with ${key}`);
+      await page.locator('canvas').press('Home');
+      await page.waitForTimeout(100);
+    }
     if (await page.locator('#preview-badge').isVisible()) errors.push('Embedded preview shows a local-preview badge');
     page.off('pageerror', captureError);
     const phoneContext = await context.browser().newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
