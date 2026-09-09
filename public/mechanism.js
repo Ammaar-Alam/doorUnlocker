@@ -6,6 +6,7 @@ import { controlWiring } from './wiring.js';
 const view = document.getElementById('mechanism-view');
 const canvas = document.getElementById('mechanism-canvas');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const isWidget = document.documentElement.classList.contains('widget');
 
 async function createMechanism() {
   let pendingCommand;
@@ -25,10 +26,14 @@ async function createMechanism() {
   camera.position.set(125, 80, 480);
   camera.lookAt(0, 24, 0);
   const controls = new OrbitControls(camera, canvas);
-  canvas.style.touchAction = 'pan-y';
+  canvas.style.touchAction = isWidget ? 'none' : 'pan-y';
+  if (isWidget) canvas.setAttribute('aria-label', 'Motor assembly. Drag to rotate, scroll or pinch to zoom. Use plus and minus to zoom or Home to reset.');
   controls.target.set(0, 24, 0);
   controls.enablePan = false;
-  controls.enableZoom = false;
+  controls.enableZoom = isWidget;
+  controls.zoomToCursor = isWidget;
+  controls.minZoom = .65;
+  controls.maxZoom = 3;
   controls.minPolarAngle = Math.PI * .23;
   controls.maxPolarAngle = Math.PI * .65;
   controls.minAzimuthAngle = -.55;
@@ -415,6 +420,7 @@ async function createMechanism() {
   document.getElementById('close-part').addEventListener('click', () => { selectPart(null); partSelect.focus(); });
   const raycaster = new THREE.Raycaster();
   function pick(event) {
+    if (isWidget) return null;
     const rect = canvas.getBoundingClientRect();
     raycaster.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2), camera);
     for (const hit of raycaster.intersectObjects([assembly, handle, fishingLine], true)) {
@@ -435,7 +441,7 @@ async function createMechanism() {
   canvas.addEventListener('pointerdown', event => { pointerStart = [event.clientX, event.clientY]; hoveredPart = null; requestRender(); });
   canvas.addEventListener('pointercancel', () => { pointerStart = null; });
   canvas.addEventListener('pointerup', event => {
-    if (pointerStart && Math.hypot(event.clientX - pointerStart[0], event.clientY - pointerStart[1]) < 5) selectPart(pick(event));
+    if (!isWidget && pointerStart && Math.hypot(event.clientX - pointerStart[0], event.clientY - pointerStart[1]) < 5) selectPart(pick(event));
     pointerStart = null;
   });
   function annotate() {
@@ -575,6 +581,12 @@ async function createMechanism() {
   document.getElementById('reset-view').addEventListener('click', () => { controls.reset(); selectPart(null); });
   canvas.addEventListener('keydown', event => {
     if (event.key === 'Escape') { selectPart(null); return; }
+    if (isWidget && ['+', '=', '-'].includes(event.key)) {
+      event.preventDefault();
+      if (event.key === '-') controls.dollyOut(.8);
+      else controls.dollyIn(.8);
+      return;
+    }
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home'].includes(event.key)) return;
     event.preventDefault();
     if (event.key === 'Home') controls.reset();

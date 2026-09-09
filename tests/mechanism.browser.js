@@ -147,6 +147,29 @@ async function checkMechanism(userPage) {
     }
     await page.request.post('http://localhost:3107/close');
     await page.evaluate(() => { window.requestAnimationFrame = window.__doorCheckFrame; delete window.__doorCheckFrame; });
+    await page.setViewportSize({ width: 340, height: 400 });
+    await page.goto('http://localhost:3107/?view=widget');
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.ready === 'true');
+    const zoomDistance = () => page.locator('#annotations circle').evaluateAll(dots => Math.hypot(
+      Number(dots[0].getAttribute('cx')) - Number(dots.at(-1).getAttribute('cx')),
+      Number(dots[0].getAttribute('cy')) - Number(dots.at(-1).getAttribute('cy')),
+    ));
+    const overviewDistance = await zoomDistance();
+    await page.locator('canvas').hover();
+    await page.mouse.wheel(0, -400);
+    await page.waitForTimeout(150);
+    const zoomedDistance = await zoomDistance();
+    if (zoomedDistance < overviewDistance * 1.1) errors.push('Embedded preview does not zoom with the wheel');
+    await page.locator('canvas').click();
+    await page.waitForTimeout(150);
+    if (Math.abs(await zoomDistance() - zoomedDistance) > .1) errors.push('Clicking the embedded preview resets its zoom');
+    await page.locator('canvas').press('-');
+    await page.waitForTimeout(100);
+    if (await zoomDistance() >= zoomedDistance) errors.push('Embedded preview does not zoom out with the keyboard');
+    await page.locator('canvas').press('Home');
+    await page.waitForTimeout(100);
+    if (Math.abs(await zoomDistance() - overviewDistance) > .1) errors.push('Embedded preview does not reset its zoom');
+    if (await page.locator('#preview-badge').isVisible()) errors.push('Embedded preview shows a local-preview badge');
     page.off('pageerror', captureError);
     const phoneContext = await context.browser().newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     try {
@@ -165,7 +188,7 @@ async function checkMechanism(userPage) {
       }
     } finally { await phoneContext.close(); }
     if (errors.length) throw new Error([...new Set(errors)].join('; '));
-    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', aboutPopover: 'passed', mobileBottom: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed' };
+    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', aboutPopover: 'passed', mobileBottom: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed', widgetZoom: 'passed' };
   } finally {
     releaseModels?.();
     await context.close();
