@@ -16,6 +16,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm test
+      - run: bash -n .github/deploy.sh
       - uses: arduino/setup-arduino-cli@v2
       - run: |
           arduino-cli core update-index
@@ -23,3 +24,32 @@ jobs:
           arduino-cli lib install ArduinoIoTCloud@2.10.0
           cp firmware/doorOpener/arduino_secrets.example.h firmware/doorOpener/arduino_secrets.h
           arduino-cli compile --fqbn arduino:esp32:nano_nora firmware/doorOpener
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Ammaar-Alam/doorUnlocker'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: door-unlocker
+      url: https://door.ammaaralam.com
+    concurrency:
+      group: door-unlocker-production
+      cancel-in-progress: false
+    steps:
+      - name: Deploy checked revision
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          key="$RUNNER_TEMP/door-deploy-key"
+          known_hosts="$RUNNER_TEMP/door-known-hosts"
+          trap 'rm -f "$key" "$known_hosts"' EXIT
+          printf '%s\n' "$DEPLOY_KEY" > "$key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$known_hosts"
+          ssh -i "$key" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$known_hosts" \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            "$DEPLOY_USER@$DEPLOY_HOST" "$GITHUB_SHA"
