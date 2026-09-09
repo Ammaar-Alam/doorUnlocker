@@ -17,6 +17,6 @@ The original editable spindle model is retained in [source/](source/). It predat
 ## String attachment
 
 - **Spindle end:** use an **Arbor knot** to attach the string to the spindle
-- **Doorknob end:** use a **round turn and two half hitches** to attach the string to the doorknob
+- **Handle end:** a **round turn and half hitches**, with duct tape wrapped over the knot
 
 Check both knots and start with the string released before the first powered cycle.

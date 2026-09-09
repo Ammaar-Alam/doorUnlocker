@@ -1,6 +1,6 @@
 # API
 
-Base URL: `https://door.ammaaralam.com`. The same routes are available under `/api` for existing clients. Responses use JSON and are not cached.
+Routes are relative to your server (`http://localhost:3000` when running locally). The same routes are available under `/api` for existing clients. Responses use JSON and are not cached.
 
 ## Authentication
 

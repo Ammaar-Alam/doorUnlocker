@@ -200,6 +200,7 @@ details[open] .disclosure-arrow { transform: rotate(45deg); }
 .part-description-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .part-description h3 { margin: 0; font-size: 13px; font-weight: 600; }
 .part-description p { margin-top: 8px; font-size: 11px; line-height: 1.7; color: var(--muted); }
+.part-description .part-specs { font-size: 10px; color: var(--ink); font-variant-numeric: tabular-nums; }
 #close-part { font-size: 20px; min-width: 32px; min-height: 32px; justify-content: center; }
 
 .wiring-diagram { width: 100%; display: block; margin: 0 0 8px; }

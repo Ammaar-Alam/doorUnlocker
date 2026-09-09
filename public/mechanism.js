@@ -99,6 +99,18 @@ async function createMechanism() {
     wire.userData.curve = curve;
     return wire;
   }
+  function led(parent, x, y, z, color) {
+    mesh(new THREE.BoxGeometry(2.1, 1.3, .45), silver, parent, x, y, z);
+    mesh(new THREE.BoxGeometry(1.5, 1.3, .5), white, parent, x, y, z + .05);
+    const light = new THREE.PointLight(color, 65, 12, 2);
+    const lens = new THREE.MeshBasicMaterial();
+    lens.color = light.color;
+    mesh(new THREE.BoxGeometry(1.3, .9, .18), lens, parent, x, y, z + .4).castShadow = false;
+    mesh(new THREE.BoxGeometry(.65, .4, .05), new THREE.MeshBasicMaterial({ color: 0xffffff }), parent, x, y, z + .52).castShadow = false;
+    light.position.set(x, y, z + 1.6);
+    parent.add(light);
+    return light;
+  }
 
   const loader = new STLLoader();
   const [geometry, baseGeometry] = await Promise.all([
@@ -172,8 +184,7 @@ async function createMechanism() {
   }
   mesh(new THREE.BoxGeometry(15, 2.8, 2.8), black, driver, 0, -21, 3);
   for (let i = 0; i < 6; i++) mesh(new THREE.BoxGeometry(.7, .7, 3.8), gold, driver, -6.35 + i * 2.54, -21, 6);
-  mesh(new THREE.SphereGeometry(1.3, 10, 6), new THREE.MeshBasicMaterial({ color: 0xff5b54 }), driver, 0, -6, 3);
-  mesh(new THREE.CircleGeometry(3.3, 24), new THREE.MeshBasicMaterial({ color: 0xff5b54, transparent: true, opacity: .16, depthWrite: false }), driver, 0, -6, 2.2);
+  led(driver, 0, -6, 3, 0xff3028);
 
   const breadboard = new THREE.Group();
   breadboard.position.set(30, -30, 9.5);
@@ -208,8 +219,8 @@ async function createMechanism() {
   for (const [x, y] of [[-4, -1], [4, -2], [4, -9], [-3, -17], [3, -15]]) mesh(new THREE.BoxGeometry(1.7, 2, .8), silver, nano, x, y, 1.2);
   mesh(new THREE.BoxGeometry(8.6, 5.5, 3.2), silver, nano, 0, -21, 2);
   mesh(new THREE.BoxGeometry(6.5, .3, 1.6), black, nano, 0, -23.9, 2);
-  const statusLed = mesh(new THREE.SphereGeometry(1.25, 12, 8), new THREE.MeshBasicMaterial({ color: 0x36c78a }), nano, 4, -17, 1.5);
-  const statusGlow = mesh(new THREE.CircleGeometry(3.5, 24), new THREE.MeshBasicMaterial({ color: 0x36c78a, transparent: true, opacity: .19, depthWrite: false }), nano, 4, -17, 1.3);
+  const statusLight = led(nano, 1, -12.5, 1.2, 0x19ec78);
+  led(nano, -5.5, -17, 1.2, 0x8dff26);
 
   const usb = new THREE.Group();
   usb.position.set(30, -60, 22);
@@ -236,6 +247,14 @@ async function createMechanism() {
     wire.userData.part = 'nano';
     return wire;
   });
+  // the two right-side jumpers disappear behind the driver in the reference photos
+  for (const points of [
+    [[44.26, -12.22, 18], [44, -7, 24], [28, 3, 30], [20, 2, 27], [20, 14, 15]],
+    [[44.26, -14.76, 18], [47, -19, 26], [31, -33, 30], [26, -17, 32], [37, 6, 28], [37, 14, 15]],
+  ]) {
+    mesh(new THREE.BoxGeometry(1.8, 2, 5), black, assembly, points[0][0], points[0][1], 15.5);
+    tube(points, .55, black, assembly).userData.part = 'breadboard';
+  }
   const powerWire = tube([[65.5, -22, 20], [63, -2, 26], [51, 13, 28], [25.1, 19.4, 26]], .5, redWire, assembly);
   tube([[60.5, -22, 20], [59, -3, 24], [49, 11, 26], [30.2, 19.4, 26]], .5, black, assembly);
   const motorWire = tube([[10.65, 29.4, 26], [5, 16, 35], [5, -45, 28], [-7.25, -56.5, 23.5]], .5, redWire, assembly);
@@ -262,6 +281,8 @@ async function createMechanism() {
   let knownState = null;
   let motion = null;
   let frame = 0;
+  let commandTarget = null;
+  let commandTimer;
   const fishingLine = new THREE.Mesh(new THREE.BufferGeometry(), lineMaterial);
   fishingLine.castShadow = true;
   scene.add(fishingLine);
@@ -281,8 +302,6 @@ async function createMechanism() {
   function pose(value) {
     position = value;
     lever.rotation.z = value * .82;
-    statusLed.material.color.set(knownState ? 0xf25454 : 0x36c78a);
-    statusGlow.material.color.copy(statusLed.material.color);
     scene.updateMatrixWorld(true);
     endPoint.copy(new THREE.Vector3(-68, -5, -1.4)).applyMatrix4(lever.matrixWorld);
     const localEnd = motor.worldToLocal(endPoint.clone()).sub(spindle.position);
@@ -301,16 +320,16 @@ async function createMechanism() {
   }
 
   const parts = [
-    { id: 'handle', name: 'Door handle', description: 'The line pulls the lever. Releasing the line lets the handle return.', group: handle, point: [5, 6, 4], x: .65, y: .045 },
-    { id: 'line', name: 'Fishing line', description: 'Carries the pull from the spindle to the handle directly above the assembly.', group: fishingLine, x: .70, y: .20 },
-    { id: 'spindle', name: 'Printed spindle', description: 'The custom spool turns with the motor shaft and gathers the fishing line.', group: spindle, point: [-12, 4, 13], x: .06, y: .34 },
-    { id: 'driver', name: 'L298N driver', description: 'Uses the Nano’s control signals to switch the motor supply and reverse its direction.', group: driver, point: [15, 0, 12], x: .77, y: .43 },
-    { id: 'motor', name: 'Gearmotor', description: 'The 24 V worm gearmotor winds or releases the line. Its gearbox holds the handle between strokes.', group: motor, point: [-10, -61, 8], x: .06, y: .56 },
-    { id: 'nano', name: 'Nano ESP32', description: 'The Arduino Nano ESP32 receives door commands and controls the motor’s timed strokes.', group: nano, point: [8, 8, 3], x: .77, y: .62 },
-    { id: 'breadboard', name: 'Mini breadboard', description: 'Connects the Nano’s pins to the driver without soldering.', group: breadboard },
-    { id: 'base', name: 'Printed base', description: 'The original mounting plate holds the motor, driver and breadboard against the door.', group: base, point: [-62, -42, 10], x: .06, y: .77 },
-    { id: 'power', name: 'Barrel power', description: 'The barrel jack supplies power to the driver’s motor input.', group: power, point: [5, 0, 5], x: .76, y: .82 },
-    { id: 'usb', name: 'USB-C', description: 'Powers the Nano ESP32 separately from the motor supply.', group: usb, point: [0, -6, 3], x: .33, y: .94 },
+    { id: 'handle', name: 'Door handle', description: 'A round turn and half hitches fasten the line to the lever, with duct tape wrapped over the knot. Winding the line pulls the handle down; releasing it lets the handle return.', specs: 'Tied, then taped · No handle modification', group: handle, point: [5, 6, 4], x: .65, y: .045 },
+    { id: 'line', name: 'Fishing line', description: 'A light, flexible link between the motor and handle. An arbor knot anchors the spindle end; a round turn and half hitches secure the handle end under tape.', specs: 'Pulls to open · Slackens to release', group: fishingLine, x: .70, y: .20 },
+    { id: 'spindle', name: 'Printed spindle', description: 'The arbor knot grips this custom spool as it gathers the line. Raised rims keep the winding in place, turning the motor’s rotation into a short pull on the handle.', specs: '25 mm diameter · 13 mm tall', group: spindle, point: [-12, 4, 13], x: .06, y: .34 },
+    { id: 'driver', name: 'L298N driver', description: 'An H-bridge reverses the motor’s supply to wind or release the line. The Nano sets direction and ramps the drive signal for a gentler start and stop; the heat sink carries away heat.', specs: '2 motor channels · 1 in use', group: driver, point: [15, 0, 12], x: .77, y: .43 },
+    { id: 'motor', name: 'Gearmotor', description: 'The BRINGSMART worm gearmotor trades speed for pulling torque through a right-angle gearbox. The calibrated opening stroke takes up the line; a shorter, gentler reverse stroke releases it.', specs: '24 V motor · 0.97 s open · 0.65 s release', group: motor, point: [-10, -61, 8], x: .06, y: .56 },
+    { id: 'nano', name: 'Nano ESP32', description: 'Receives commands over Wi-Fi and times each motor stroke on the board. The shortcut’s five-second hold also runs here, so closing does not depend on a phone staying awake.', specs: 'ESP32-S3 · 16 MB flash · USB-C', group: nano, point: [8, 8, 3], x: .77, y: .62 },
+    { id: 'breadboard', name: 'Mini breadboard', description: 'Metal strips connect each group of five holes without soldering. The center gap keeps the Nano’s two pin headers separate, while jumper wires connect the driver.', specs: '170 contacts · 2.54 mm pitch', group: breadboard },
+    { id: 'base', name: 'Printed base', description: 'The motor cradle and mounting plate hold the moving parts and electronics together. Adhesive mounting strips secure the printed assembly to the door.', specs: '140.7 × 123.3 mm · Original print model', group: base, point: [-62, -42, 10], x: .06, y: .77 },
+    { id: 'power', name: 'Barrel power', description: 'The barrel adapter brings the motor supply to screw terminals. The driver switches that supply, keeping motor current out of the Nano’s signal pins.', specs: 'Separate motor supply · Common ground', group: power, point: [5, 0, 5], x: .76, y: .82 },
+    { id: 'usb', name: 'USB-C', description: 'Connects the Nano for power, programming and serial diagnostics. The motor draws its current through the driver’s separate supply.', specs: 'Power · Programming · Serial', group: usb, point: [0, -6, 3], x: .33, y: .94 },
   ];
   const partSelect = document.getElementById('part-select');
   const details = document.getElementById('part-details');
@@ -376,6 +395,7 @@ async function createMechanism() {
     if (part) {
       document.getElementById('part-name').textContent = part.name;
       document.getElementById('part-description').textContent = part.description;
+      document.getElementById('part-specs').textContent = part.specs;
     }
     for (const item of parts) if (item.element) {
       item.element.dataset.active = String(item === part);
@@ -447,7 +467,7 @@ async function createMechanism() {
       if (t === 1) viewMotion = null;
     }
     let highlighting = false;
-    const blend = 1 - Math.exp(-Math.min(32, now - lastFrame) / 48);
+    const blend = 1 - Math.exp(-THREE.MathUtils.clamp(now - lastFrame, 0, 32) / 48);
     lastFrame = now;
     const progress = motion ? THREE.MathUtils.clamp((now - motion.start) / motion.duration, 0, 1) : 0;
     const flowPart = motion && ['nano', 'driver', 'motor', 'spindle', 'handle'][Math.min(4, Math.floor(progress * 5))];
@@ -463,12 +483,16 @@ async function createMechanism() {
       const eased = t * t * (3 - 2 * t);
       pose(motion.from + (motion.to - motion.from) * eased);
       for (const [index, flow] of flows.entries()) flow.marker.position.copy(flow.curve.getPoint((t * 2 + index / 3) % 1));
-      pullMarker.position.copy(fishingCurve.getPoint(motion.to > motion.from ? 1 - t : t));
+      pullMarker.position.copy(fishingCurve.getPoint(motion.opening ? 1 - t : t));
       if (t === 1) motion = null;
     }
     for (const flow of flows) flow.marker.visible = Boolean(motion) && !reducedMotion.matches;
     pullMarker.visible = Boolean(motion) && !reducedMotion.matches;
-    canvas.dataset.flow = motion ? 'active' : 'idle';
+    const flowState = motion ? 'active' : 'idle';
+    if (canvas.dataset.flow !== flowState) {
+      canvas.dataset.flow = flowState;
+      document.dispatchEvent(new CustomEvent('door-motion', { detail: { active: Boolean(motion), opening: motion?.opening === true } }));
+    }
     renderer.render(scene, camera);
     annotate();
     if (motion || highlighting || viewMotion) requestRender();
@@ -476,23 +500,34 @@ async function createMechanism() {
   function requestRender() {
     if (!frame && !document.hidden) frame = requestAnimationFrame(render);
   }
+  function animate(open) {
+    motion = { from: position, to: open ? 1 : 0, opening: open, start: performance.now(), duration: open ? 970 : 650 };
+    if (reducedMotion.matches || document.hidden) { pose(motion.to); motion = null; }
+    requestRender();
+  }
+  function resetCommand() {
+    clearTimeout(commandTimer);
+    commandTarget = null;
+    motion = null;
+    if (knownState !== null) pose(knownState ? 1 : 0);
+    requestRender();
+  }
   function setState(open) {
     if (open === null) {
       knownState = null;
-      motion = null;
-      requestRender();
+      resetCommand();
       return;
     }
+    if (commandTarget === open) { clearTimeout(commandTimer); commandTarget = null; }
     if (knownState === open) return;
     const target = open ? 1 : 0;
     const initial = knownState === null;
     knownState = open;
-    statusLed.material.color.set(open ? 0xf25454 : 0x36c78a);
-    statusGlow.material.color.copy(statusLed.material.color);
+    statusLight.color.set(open ? 0xff3028 : 0x19ec78);
     if (initial || reducedMotion.matches || document.hidden) {
       motion = null;
       pose(target);
-    } else motion = { from: position, to: target, start: performance.now(), duration: open ? 970 : 650 };
+    } else if (motion?.to !== target && position !== target) animate(open);
     requestRender();
   }
   function resize() {
@@ -505,9 +540,21 @@ async function createMechanism() {
     camera.bottom = -span;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
-    requestRender();
+    // resizing clears the canvas after animation callbacks but before the browser paints
+    cancelAnimationFrame(frame);
+    render();
   }
   document.addEventListener('door-state', event => setState(event.detail.open));
+  document.addEventListener('door-command', event => {
+    const command = event.detail.command;
+    if (!command) { resetCommand(); return; }
+    if (knownState === null) return;
+    clearTimeout(commandTimer);
+    commandTarget = !command.includes('close');
+    animate(commandTarget);
+    // restore the reported pose if a command never receives confirmation
+    commandTimer = setTimeout(resetCommand, 15000);
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { cancelAnimationFrame(frame); frame = 0; }
     else requestRender();

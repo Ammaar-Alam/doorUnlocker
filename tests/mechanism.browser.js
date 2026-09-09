@@ -14,6 +14,28 @@ async function checkMechanism(userPage) {
     });
     await page.request.post('http://localhost:3107/close');
     await page.waitForFunction(() => document.querySelector('canvas').dataset.ready === 'true' && document.body.dataset.doorState === 'closed');
+    const resizeFrames = await page.evaluate(async () => {
+      const canvas = document.querySelector('canvas');
+      const gl = canvas.getContext('webgl2');
+      let size = `${canvas.width}:${canvas.height}`;
+      const frames = [];
+      const observer = new ResizeObserver(() => {
+        const next = `${canvas.width}:${canvas.height}`;
+        if (next === size) return;
+        size = next;
+        const pixels = new Uint8Array(canvas.width * canvas.height * 4);
+        gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+        frames.push(pixels.some((value, index) => index % 4 === 3 && value > 0));
+      });
+      observer.observe(document.querySelector('#mechanism-view'));
+      document.querySelector('[aria-label="Inspect L298N driver"]').click();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      document.querySelector('#close-part').click();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      observer.disconnect();
+      return frames;
+    });
+    if (!resizeFrames.length || resizeFrames.includes(false)) errors.push('The model disappears during inspector resizing');
     await page.setViewportSize({ width: 390, height: 680 });
     const canvas = await page.locator('canvas').boundingBox();
     await page.mouse.move(canvas.x + 90, canvas.y + 150);
@@ -48,16 +70,45 @@ async function checkMechanism(userPage) {
         return [...document.querySelectorAll('.part-label:not([hidden])')].some(label => label.getBoundingClientRect().bottom > bottom);
       })) errors.push('A part label is clipped by the diagram');
     }
+    await page.route('**/command', async route => {
+      await page.waitForTimeout(350);
+      await route.continue();
+    });
     for (const [action, target] of [['Open door', '1.000'], ['Close door', '0.000']]) {
       await page.getByRole('button', { name: action, exact: true }).click();
+      await page.waitForTimeout(180);
+      if (await page.locator('canvas').getAttribute('data-flow') !== 'active') errors.push(`${action} waits for reported completion before animating`);
+      if (await page.locator('#doorToggle').getAttribute('aria-busy') !== 'true') errors.push('Motion does not keep the control busy');
+      if (await page.locator('body').getAttribute('data-door-state') !== (target === '1.000' ? 'closed' : 'open')) errors.push('Animation changed the reported door state');
       try {
         await page.waitForFunction(() => {
           const canvas = document.querySelector('canvas');
           return canvas.dataset.flow === 'active' && Number(canvas.dataset.position) > 0 && Number(canvas.dataset.position) < 1;
         }, null, { timeout: 3500 });
         await page.waitForFunction(value => document.querySelector('canvas').dataset.position === value, target, { timeout: 2000 });
+        await page.waitForFunction(state => document.body.dataset.doorState === state, target === '1.000' ? 'open' : 'closed');
+        await page.waitForTimeout(120);
+        if (await page.locator('canvas').getAttribute('data-flow') !== 'idle') errors.push('Confirmation replayed the completed animation');
       } catch { errors.push(`${action} did not animate`); }
+      await page.locator('.adjustment-details').evaluate(details => { details.open = true; });
+      await page.getByRole('button', { name: target === '1.000' ? 'Force open' : 'Force close', exact: true }).click();
+      await page.waitForTimeout(180);
+      if (await page.locator('canvas').getAttribute('data-flow') !== 'active' || await page.locator('canvas').getAttribute('data-position') !== target) errors.push('Same-position string adjustment did not animate the electrical flow');
+      await page.waitForFunction(() => document.querySelector('canvas').dataset.flow === 'idle');
+      await page.waitForTimeout(400);
     }
+    await page.unroute('**/command');
+    await page.route('**/command', async route => {
+      await page.waitForTimeout(350);
+      await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'Controller unavailable' }) });
+    });
+    await page.getByRole('button', { name: 'Open door', exact: true }).click();
+    await page.waitForTimeout(180);
+    if (await page.locator('canvas').getAttribute('data-flow') !== 'active') errors.push('A pending request did not start motion');
+    await page.getByText('Controller unavailable', { exact: true }).waitFor();
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.flow === 'idle');
+    if (await page.locator('canvas').getAttribute('data-position') !== '0.000' || await page.locator('body').getAttribute('data-door-state') !== 'closed') errors.push('Rejected command did not restore the reported pose');
+    await page.unroute('**/command');
     await page.selectOption('#part-select', '');
     await page.setViewportSize({ width: 844, height: 390 });
     for (const selector of ['.doorbell-details', '.adjustment-details']) {
@@ -76,7 +127,7 @@ async function checkMechanism(userPage) {
     await page.evaluate(() => { window.requestAnimationFrame = window.__doorCheckFrame; delete window.__doorCheckFrame; });
     page.off('pageerror', captureError);
     if (errors.length) throw new Error([...new Set(errors)].join('; '));
-    return { viewportFit: 'passed', scroll: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', animationWithEarlyFrame: 'passed' };
+    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed' };
   } finally {
     await context.close();
   }
