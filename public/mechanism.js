@@ -8,6 +8,12 @@ const canvas = document.getElementById('mechanism-canvas');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 async function createMechanism() {
+  let pendingCommand;
+  document.addEventListener('door-command', event => {
+    const command = { ...event.detail, start: performance.now() };
+    if (canvas.dataset.ready === 'true') applyCommand(command);
+    else pendingCommand = command;
+  });
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -500,9 +506,10 @@ async function createMechanism() {
   function requestRender() {
     if (!frame && !document.hidden) frame = requestAnimationFrame(render);
   }
-  function animate(open) {
-    motion = { from: position, to: open ? 1 : 0, opening: open, start: performance.now(), duration: open ? 970 : 650 };
-    if (reducedMotion.matches || document.hidden) { pose(motion.to); motion = null; }
+  function animate(open, start = performance.now()) {
+    motion = { from: position, to: open ? 1 : 0, opening: open, start, duration: open ? 970 : 650 };
+    if (performance.now() - start >= motion.duration) motion = null;
+    else if (reducedMotion.matches || document.hidden) { pose(motion.to); motion = null; }
     requestRender();
   }
   function resetCommand() {
@@ -545,16 +552,16 @@ async function createMechanism() {
     render();
   }
   document.addEventListener('door-state', event => setState(event.detail.open));
-  document.addEventListener('door-command', event => {
-    const command = event.detail.command;
-    if (!command) { resetCommand(); return; }
+  function applyCommand({ command, start }) {
+    const remaining = 15000 - (performance.now() - start);
+    if (!command || remaining <= 0) { resetCommand(); return; }
     if (knownState === null) return;
     clearTimeout(commandTimer);
     commandTarget = !command.includes('close');
-    animate(commandTarget);
+    animate(commandTarget, start);
     // restore the reported pose if a command never receives confirmation
-    commandTimer = setTimeout(resetCommand, 15000);
-  });
+    commandTimer = setTimeout(resetCommand, remaining);
+  }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { cancelAnimationFrame(frame); frame = 0; }
     else requestRender();
@@ -586,6 +593,7 @@ async function createMechanism() {
   pose(0);
   const state = document.body.dataset.doorState;
   setState(state === 'open' ? true : state === 'closed' ? false : null);
+  if (pendingCommand) applyCommand(pendingCommand);
   resize();
   view.classList.add('model-ready');
   canvas.dataset.ready = 'true';

@@ -1,18 +1,31 @@
 async function checkMechanism(userPage) {
   const context = await userPage.context().browser().newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
+  let releaseModels;
   try {
     const errors = [];
     const captureError = error => errors.push(error.message);
     page.on('pageerror', captureError);
+    const modelsPending = new Promise(resolve => { releaseModels = resolve; });
+    await page.route('**/models/*.stl', async route => { await modelsPending; await route.continue(); });
+    await page.route('**/command', route => route.fulfill({ contentType: 'application/json', body: '{"ok":true}' }));
     await page.goto('http://localhost:3107');
     const auth = await page.evaluate(async () => (await fetch('/auth-status')).json());
     if (!auth.preview) throw new Error('This check requires the simulated controller');
+    await page.request.post('http://localhost:3107/close');
+    await page.getByRole('button', { name: 'Open door', exact: true }).click();
+    await page.waitForTimeout(120);
+    releaseModels();
+    await page.waitForFunction(() => document.querySelector('canvas').dataset.ready === 'true');
+    await page.waitForTimeout(80);
+    if (await page.locator('canvas').getAttribute('data-flow') !== 'active') errors.push('A command sent during model loading lost its animation');
+    await page.unroute('**/models/*.stl');
+    await page.unroute('**/command');
+    await page.reload();
     await page.evaluate(() => {
       window.__doorCheckFrame = window.requestAnimationFrame;
       window.requestAnimationFrame = callback => window.__doorCheckFrame(time => callback(time - 32));
     });
-    await page.request.post('http://localhost:3107/close');
     await page.waitForFunction(() => document.querySelector('canvas').dataset.ready === 'true' && document.body.dataset.doorState === 'closed');
     const resizeFrames = await page.evaluate(async () => {
       const canvas = document.querySelector('canvas');
@@ -127,8 +140,9 @@ async function checkMechanism(userPage) {
     await page.evaluate(() => { window.requestAnimationFrame = window.__doorCheckFrame; delete window.__doorCheckFrame; });
     page.off('pageerror', captureError);
     if (errors.length) throw new Error([...new Set(errors)].join('; '));
-    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed' };
+    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed' };
   } finally {
+    releaseModels?.();
     await context.close();
   }
 }
