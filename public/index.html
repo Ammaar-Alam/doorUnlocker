@@ -91,15 +91,16 @@
           </section>
 
           <div class="secondary-controls">
-            <details class="doorbell-details" name="door-tools">
-              <summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span>Ring the bell</span><span class="disclosure-arrow" aria-hidden="true">+</span></summary>
-              <form id="doorbell-form" class="bell-form"><label class="sr-only" for="doorbellMessage">Optional message</label><input id="doorbellMessage" type="text" maxlength="240" placeholder="Leave a message (optional)" /><button id="ringDoorbellButton" class="small-button" type="submit">Ring bell</button></form>
-              <p id="doorbell-feedback" class="feedback" role="status" hidden></p>
-            </details>
             <details class="adjustment-details" name="door-tools">
               <summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg><span>Adjust the string</span><span class="disclosure-arrow" aria-hidden="true">+</span></summary>
-              <p>Run an extra stroke to adjust tension.</p>
-              <div class="force-buttons"><button id="manualOpenButton" class="small-button" type="button" disabled>Force open</button><button id="manualCloseButton" class="small-button" type="button" disabled>Force close</button></div>
+              <div class="disclosure-content">
+                <p>Adjust tension or untangle the string.</p>
+                <div class="force-buttons"><button id="manualOpenButton" class="small-button" type="button" disabled>Force open</button><button id="manualCloseButton" class="small-button" type="button" disabled>Force close</button></div>
+              </div>
+            </details>
+            <details class="doorbell-details" name="door-tools">
+              <summary><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span>Ring the bell</span><span class="disclosure-arrow" aria-hidden="true">+</span></summary>
+              <div class="disclosure-content"><p class="bell-unavailable">Ring the bell is unavailable right now.</p></div>
             </details>
           </div>
           <div class="access-note"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 9V6a5 5 0 0 1 10 0v3M4 9h12v9H4z"/></svg><span>Password protected<br /><span>Midnight–8am · New York</span></span></div>

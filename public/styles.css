@@ -124,12 +124,13 @@ summary::-webkit-details-marker { display: none; }
 .secondary-controls summary svg { width: 16px; height: 16px; color: var(--muted); }
 .disclosure-arrow { margin-left: auto; color: var(--muted); font-size: 15px; font-weight: 400; transition: transform 150ms var(--ease-out); }
 details[open] .disclosure-arrow { transform: rotate(45deg); }
-.secondary-controls details > p { font-size: 10px; line-height: 1.6; color: var(--muted); }
+.disclosure-content > p { font-size: 10px; line-height: 1.6; color: var(--muted); }
 .force-buttons { display: flex; gap: var(--space-sm); margin: 10px 0 14px; }
 .force-buttons button { flex: 1; }
-.bell-form { display: grid; gap: var(--space-sm); margin: 3px 0 14px; }
-.bell-form button { justify-self: start; }
-#doorbell-feedback { margin: 0 0 14px; }
+.bell-unavailable { margin-bottom: 14px; }
+.secondary-controls details::details-content { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 180ms var(--ease-out), opacity 180ms var(--ease-out), content-visibility 180ms allow-discrete; }
+.secondary-controls details[open]::details-content { grid-template-rows: 1fr; opacity: 1; transition-duration: 250ms; }
+.disclosure-content { overflow: hidden; }
 .access-note { display: flex; align-items: center; gap: 9px; margin-top: auto; padding-top: 37px; font-size: 9px; line-height: 1.7; color: var(--muted); }
 .access-note svg { width: 13px; height: 15px; flex-shrink: 0; }
 .access-note span span { color: var(--faint); }
@@ -189,7 +190,7 @@ details[open] .disclosure-arrow { transform: rotate(45deg); }
   .preview-badge { font-size: 8px; padding: 3px 5px; }
   .control-heading { right: 20px; }
 }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after, details::details-content { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
 .part-label:hover, .part-label[data-active="true"], .part-label[data-hovered="true"] { color: var(--blue); }
 .part-label[data-active="true"] .part-index { color: var(--blue); }

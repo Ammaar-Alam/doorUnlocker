@@ -185,27 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
   openButton.addEventListener('click', () => sendCommand('force-open'));
   closeButton.addEventListener('click', () => sendCommand('force-close'));
 
-  document.getElementById('doorbell-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const button = document.getElementById('ringDoorbellButton');
-    const input = document.getElementById('doorbellMessage');
-    const result = document.getElementById('doorbell-feedback');
-    button.disabled = true;
-    result.hidden = true;
-    try {
-      const data = await request('/ring-doorbell', { method: 'POST', body: JSON.stringify({ message: input.value }) });
-      result.textContent = data.message;
-      result.classList.remove('error-text');
-      input.value = '';
-    } catch (error) {
-      result.textContent = error.message;
-      result.classList.add('error-text');
-    } finally {
-      button.disabled = false;
-      result.hidden = false;
-    }
-  });
-
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopEvents();
     else void refreshAuth();

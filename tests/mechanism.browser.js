@@ -132,6 +132,43 @@ async function checkMechanism(userPage) {
     if (await page.locator('canvas').getAttribute('data-position') !== '0.000' || await page.locator('body').getAttribute('data-door-state') !== 'closed') errors.push('Rejected command did not restore the reported pose');
     await page.unroute('**/command');
     await page.selectOption('#part-select', '');
+    for (const reducedMotion of ['no-preference', 'reduce']) {
+      await page.emulateMedia({ reducedMotion });
+      const disclosureErrors = await page.evaluate(async () => {
+        const errors = [];
+        const details = [...document.querySelectorAll('.secondary-controls details')];
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!details[0].matches('.adjustment-details')) errors.push('String adjustment is not first');
+        const bell = document.querySelector('.doorbell-details');
+        if (bell.querySelector('form, input, button') || !bell.textContent.includes('unavailable right now')) errors.push('Bell is not unavailable upfront');
+        for (const item of details) item.open = false;
+        await new Promise(resolve => setTimeout(resolve, 300));
+        for (const item of details) {
+          const height = () => item.getBoundingClientRect().height;
+          const collapsed = height();
+          for (const open of [true, false]) {
+            const before = height();
+            item.querySelector('summary').click();
+            const samples = [];
+            const start = performance.now();
+            while (performance.now() - start < 350) {
+              await new Promise(requestAnimationFrame);
+              samples.push(height());
+            }
+            const after = height();
+            if (item.open !== open || (open ? after <= collapsed : Math.abs(after - collapsed) > 1)) errors.push('Disclosure did not reach its final state');
+            const between = samples.some(value => value > Math.min(before, after) + 1 && value < Math.max(before, after) - 1);
+            if (between === reduced) errors.push(reduced ? 'Reduced motion still animates' : 'Disclosure snaps instead of animating');
+          }
+        }
+        details[0].open = true;
+        details[1].querySelector('summary').click();
+        if (details[0].open || !details[1].open) errors.push('Disclosures lost exclusive expansion');
+        return errors;
+      });
+      errors.push(...disclosureErrors);
+    }
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.setViewportSize({ width: 844, height: 390 });
     for (const selector of ['.doorbell-details', '.adjustment-details']) {
       await page.locator(selector).evaluate(details => { details.open = true; });
@@ -139,7 +176,7 @@ async function checkMechanism(userPage) {
       await page.mouse.move(panel.x + panel.width / 2, panel.y + panel.height / 2);
       await page.mouse.wheel(0, 600);
       await page.waitForTimeout(250);
-      if (!await page.locator(`${selector} button`).first().evaluate(button => {
+      if (!await page.locator(`${selector} button, ${selector} .bell-unavailable`).first().evaluate(button => {
         const bounds = button.getBoundingClientRect();
         const panel = button.closest('.control-panel').getBoundingClientRect();
         return bounds.top >= panel.top && bounds.bottom <= panel.bottom && button.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2));
@@ -195,7 +232,7 @@ async function checkMechanism(userPage) {
       }
     } finally { await phoneContext.close(); }
     if (errors.length) throw new Error([...new Set(errors)].join('; '));
-    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', aboutPopover: 'passed', mobileBottom: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed', widgetZoom: 'passed' };
+    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', aboutPopover: 'passed', mobileBottom: 'passed', shortViewportControls: 'passed', disclosures: 'passed', reducedMotion: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed', widgetZoom: 'passed' };
   } finally {
     releaseModels?.();
     await context.close();
