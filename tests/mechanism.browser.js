@@ -214,6 +214,23 @@ async function checkMechanism(userPage) {
       await page.waitForTimeout(100);
     }
     if (await page.locator('#preview-badge').isVisible()) errors.push('Embedded preview shows a local-preview badge');
+    await page.setViewportSize({ width: 220, height: 360 });
+    const widgetFits = () => page.locator('.control-panel').evaluate(panel => {
+      const bounds = panel.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= innerWidth && bounds.bottom <= innerHeight && document.documentElement.scrollHeight === innerHeight;
+    });
+    if (!await widgetFits()) errors.push('Compact embedded controls overflow their pane');
+    if (await page.locator('#door-state').evaluate(label => getComputedStyle(label).fontSize) !== '12px') errors.push('Embedded status typography is oversized');
+    await page.route('**/auth-status', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ preview: true, authRequired: true, authenticated: false }) }));
+    await page.reload();
+    await page.locator('#login-section').waitFor({ state: 'visible' });
+    if (!await widgetFits()) errors.push('Protected embedded controls overflow their pane');
+    if (!await page.locator('#password').evaluate(input => {
+      const bounds = input.getBoundingClientRect();
+      return bounds.width > 70 && bounds.left >= 0 && bounds.right <= innerWidth;
+    })) errors.push('Embedded password input does not fit');
+    if (!await page.locator('#doorToggle').isDisabled()) errors.push('Protected embedded controls are enabled');
+    await page.unroute('**/auth-status');
     page.off('pageerror', captureError);
     const phoneContext = await context.browser().newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     try {
@@ -232,7 +249,7 @@ async function checkMechanism(userPage) {
       }
     } finally { await phoneContext.close(); }
     if (errors.length) throw new Error([...new Set(errors)].join('; '));
-    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', aboutPopover: 'passed', mobileBottom: 'passed', shortViewportControls: 'passed', disclosures: 'passed', reducedMotion: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed', widgetZoom: 'passed' };
+    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', aboutPopover: 'passed', mobileBottom: 'passed', shortViewportControls: 'passed', disclosures: 'passed', reducedMotion: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed', widgetZoom: 'passed', compactWidget: 'passed' };
   } finally {
     releaseModels?.();
     await context.close();
