@@ -87,17 +87,20 @@ body[data-door-state="open"] .connection::before, body[data-door-state="closed"]
 .model-ready .load-track::after { animation: none; width: 100%; }
 .model-error { position: absolute; inset: 0; display: grid; place-content: center; padding: 60px; text-align: center; font-size: 13px; line-height: 1.7; color: var(--muted); background: var(--surface); }
 .control-panel { border-left: 1px solid var(--line); padding: 31px 28px 25px; display: flex; flex-direction: column; background: var(--surface); }
+.control-panel > * { flex-shrink: 0; }
 .control-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
 .preview-badge { font-size: 9px; color: var(--blue); background: var(--blue-soft); padding: 4px 7px; border-radius: 4px; }
 .door-state { display: flex; align-items: center; gap: 10px; margin-top: 27px; }
 h2 { font-family: "Manrope", sans-serif; font-size: 30px; line-height: 1.2; font-weight: 500; letter-spacing: -.045em; }
-.state-light { width: 7px; height: 7px; flex: 0 0 auto; background: var(--faint); border-radius: 50%; }
-body[data-door-state="open"] .state-light { background: var(--blue); box-shadow: 0 0 0 4px var(--blue-soft); }
-body[data-door-state="closed"] .state-light { background: var(--green); }
+.state-light { width: 11px; height: 11px; flex: 0 0 auto; background: var(--faint); border-radius: 50%; }
+body[data-door-state="open"] .state-light { background: var(--red); box-shadow: 0 0 0 4px color-mix(in oklch, var(--red) 14%, transparent); }
+body[data-door-state="closed"] .state-light { background: var(--green); box-shadow: 0 0 0 4px color-mix(in oklch, var(--green) 14%, transparent); }
+body:is([data-door-state="open"], [data-door-state="closed"]) #door-state { font-size: 24px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
 .state-detail { font-size: 12px; color: var(--muted); margin: 10px 0 28px; line-height: 1.6; min-height: 18px; }
 .door-toggle { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 49px; border: 1px solid transparent; background: var(--blue); color: oklch(99.5% .004 245); padding: 0 15px; font-size: 14px; font-weight: 500; transition: transform 150ms var(--ease-out); }
 .door-toggle:hover:not(:disabled) { background: oklch(45% .13 245); }
 .door-toggle:active:not(:disabled) { transform: scale(.985); }
+#toggle-label { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 .door-icon { width: 19px; height: 22px; stroke-width: 1.4; }
 .action-arrow { width: 16px; height: 16px; margin-left: auto; }
 body[data-door-state="open"] .door-toggle { background: var(--ink); }
@@ -131,10 +134,11 @@ details[open] .disclosure-arrow { transform: rotate(45deg); }
 .access-note svg { width: 13px; height: 15px; flex-shrink: 0; }
 .access-note span span { color: var(--faint); }
 .page-footer { display: flex; align-items: flex-start; justify-content: flex-end; padding: 23px 2px 0; gap: var(--space-xl); font-size: 10px; line-height: 1.7; color: var(--muted); }
-.project-details { text-align: right; max-width: 380px; }
-.project-details summary { display: inline-flex; align-items: center; gap: 18px; min-height: 25px; }
-.project-details summary:hover { color: var(--blue); }
-.project-details > div { text-align: left; padding-top: 14px; }
+.about-toggle { gap: 18px; }
+.about-toggle span { transition: transform 180ms var(--ease-out); }
+.page-footer:has(:popover-open) .about-toggle span { transform: rotate(45deg); }
+.project-details { inset: auto; margin: 0; width: min(380px, calc(100vw - 32px)); max-height: calc(100dvh - 96px); overflow-y: auto; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); text-align: left; font-size: 12px; line-height: 1.7; box-shadow: 0 12px 36px oklch(25% .015 248 / .14); }
+.project-details:popover-open { animation: arrive 180ms var(--ease-out); }
 .project-details p { margin-bottom: 12px; }
 .project-details a { color: var(--blue); }
 .noscript-message { padding: 24px; text-align: center; }
@@ -164,7 +168,6 @@ details[open] .disclosure-arrow { transform: rotate(45deg); }
   .access-note { padding-top: 20px; }
   .page-footer { gap: 16px; font-size: 9px; }
 
-  .project-details { flex: 1; }
   .small-button, input { min-height: 44px; }
   input { font-size: 16px; }
 }
@@ -239,6 +242,13 @@ details[open] .disclosure-arrow { transform: rotate(45deg); }
   .access-note { padding-top: 14px; }
 }
 @media (max-width: 760px) {
+  .workspace { padding-bottom: calc(48px + env(safe-area-inset-bottom)); }
+  .control-panel { padding-bottom: 32px; }
   .part-description { padding: 16px 20px; grid-template-columns: 1fr; gap: 12px; }
   #wiring-detail { max-width: 320px; }
+}
+@media (pointer: coarse) and (min-width: 761px) {
+  .workspace { height: auto; min-height: calc(100svh - 56px); padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+  .mechanism-view { min-height: 360px; }
+  .control-panel { overflow-y: visible; padding-bottom: 32px; }
 }

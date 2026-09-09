@@ -49,6 +49,15 @@ async function checkMechanism(userPage) {
       return frames;
     });
     if (!resizeFrames.length || resizeFrames.includes(false)) errors.push('The model disappears during inspector resizing');
+    const frameBeforeAbout = await page.locator('.instrument').boundingBox();
+    await page.getByRole('button', { name: 'About the build' }).click();
+    const frameWithAbout = await page.locator('.instrument').boundingBox();
+    if (Math.abs(frameBeforeAbout.height - frameWithAbout.height) > 1 || Math.abs(frameBeforeAbout.y - frameWithAbout.y) > 1) errors.push('About the build shifts the main frame');
+    await page.keyboard.press('Escape');
+    if (await page.locator('#about-build').isVisible() || !await page.locator('#about-toggle').evaluate(button => button === document.activeElement)) errors.push('About does not dismiss and restore keyboard focus');
+    await page.getByRole('button', { name: 'About the build' }).click();
+    await page.locator('.drawing-heading').click();
+    if (await page.locator('#about-build').isVisible()) errors.push('About does not dismiss when clicking outside');
     await page.setViewportSize({ width: 390, height: 680 });
     const canvas = await page.locator('canvas').boundingBox();
     await page.mouse.move(canvas.x + 90, canvas.y + 150);
@@ -139,8 +148,24 @@ async function checkMechanism(userPage) {
     await page.request.post('http://localhost:3107/close');
     await page.evaluate(() => { window.requestAnimationFrame = window.__doorCheckFrame; delete window.__doorCheckFrame; });
     page.off('pageerror', captureError);
+    const phoneContext = await context.browser().newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    try {
+      const phone = await phoneContext.newPage();
+      phone.on('pageerror', captureError);
+      await phone.goto('http://localhost:3107');
+      await phone.waitForFunction(() => document.body.dataset.doorState === 'closed');
+      for (const [width, height] of [[390, 844], [844, 390]]) {
+        await phone.setViewportSize({ width, height });
+        await phone.locator('.adjustment-details').evaluate(details => { details.open = true; });
+        await phone.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+        if (!await phone.locator('.access-note > span').evaluate(note => {
+          const bounds = note.getBoundingClientRect();
+          return scrollY > 0 && bounds.top >= 0 && bounds.bottom <= innerHeight - 24;
+        })) errors.push('Mobile cannot scroll below the full password-protection note');
+      }
+    } finally { await phoneContext.close(); }
     if (errors.length) throw new Error([...new Set(errors)].join('; '));
-    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed' };
+    return { resizeFrames: resizeFrames.length, blankFrames: 0, viewportFit: 'passed', scroll: 'passed', aboutPopover: 'passed', mobileBottom: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', immediateAnimation: 'passed', commandDuringLoading: 'passed', forceFlow: 'passed', rejectedCommand: 'passed', animationWithEarlyFrame: 'passed' };
   } finally {
     releaseModels?.();
     await context.close();

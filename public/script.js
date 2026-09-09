@@ -3,6 +3,14 @@ if (!['localhost', '127.0.0.1'].includes(location.hostname) && location.protocol
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const about = document.getElementById('about-build');
+  about.addEventListener('beforetoggle', event => {
+    if (event.newState !== 'open') return;
+    const bounds = document.getElementById('about-toggle').getBoundingClientRect();
+    about.style.right = `${Math.max(16, innerWidth - bounds.right)}px`;
+    about.style.bottom = `${Math.max(16, innerHeight - bounds.top + 8)}px`;
+  });
+  window.addEventListener('resize', () => { if (about.matches(':popover-open')) about.hidePopover(); });
   const toggle = document.getElementById('doorToggle');
   const openButton = document.getElementById('manualOpenButton');
   const closeButton = document.getElementById('manualCloseButton');
