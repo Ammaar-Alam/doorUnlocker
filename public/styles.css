@@ -252,3 +252,27 @@ details[open] .disclosure-arrow { transform: rotate(45deg); }
   .mechanism-view { min-height: 360px; }
   .control-panel { overflow-y: visible; padding-bottom: 32px; }
 }
+
+.widget { color-scheme: dark; --surface: #171e28; --ink: #f1f5f7; --muted: #b1bfca; --faint: #8296a4; --line: #364450; --green: #5fdaa7; --blue: #61bce8; background: var(--surface); }
+.widget body { height: 100dvh; background: transparent; }
+.widget .menubar, .widget .window-mark, .widget .window-title, .widget .drawing-heading, .widget .drawing-footer, .widget .part-details, .widget .part-label, .widget .annotations, .widget .secondary-controls, .widget .access-note, .widget .page-footer, .widget .control-heading, .widget .state-detail { display: none; }
+.widget .workspace { height: 100dvh; max-width: none; padding: 0; }
+.widget .instrument { height: 100%; border: 0; border-radius: 0; box-shadow: none; background: transparent; animation: none; }
+.widget .window-bar { position: absolute; top: 0; right: 16px; height: 24px; min-height: 0; padding: 0; border: 0; background: transparent; z-index: 1; }
+.widget .connection { font-size: 11px; }
+.widget .instrument-body { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.widget .mechanism-panel { flex: 1; min-height: 0; background: none; }
+.widget .mechanism-view { flex: 1; height: 0; min-height: 0; }
+.widget .control-panel { position: relative; flex: none; display: grid; grid-template-columns: 1fr minmax(130px, 1fr); align-items: center; gap: 12px; border: 0; border-top: 1px solid var(--line); padding: 14px 16px; background: transparent; overflow: visible; }
+.widget .door-state { margin: 0; gap: 8px; }
+.widget .door-state h2 { font-size: 21px; letter-spacing: -.03em; }
+.widget .door-toggle { min-height: 44px; padding: 0 12px; color: #13222c; font-size: 13px; background: #cdeafa; }
+.widget .door-toggle:hover:not(:disabled) { background: #e1f4ff; }
+.widget .door-toggle:disabled { opacity: .65; }
+.widget .door-toggle .action-arrow { display: none; }
+.widget .control-feedback, .widget #control-feedback, .widget .login-section { grid-column: 1 / -1; margin-top: 0; }
+.widget input, .widget .small-button { border-color: var(--line); }
+.widget .small-button { font-size: 12px; }
+.widget .error-text { color: #ffaaa0; }
+.widget .model-loading, .widget .model-error { background: var(--surface); padding: 20px; }
+.widget .model-loading img { display: none; }
