@@ -2,11 +2,11 @@
 set -euo pipefail
 
 # installed as a root-owned forced SSH command on the deployment host
-if [[ $# != 1 || ! $1 =~ ^[0-9a-f]{40}$ ]]; then
+revision=${1:-${SSH_ORIGINAL_COMMAND:-}}
+if [[ $# -gt 1 || ! $revision =~ ^[0-9a-f]{40}$ ]]; then
   echo 'Expected one commit SHA' >&2
   exit 1
 fi
-revision=$1
 root=${DOOR_DEPLOY_ROOT:-/opt}
 repository=Ammaar-Alam/doorUnlocker
 current="$root/doorunlocker"
@@ -58,6 +58,10 @@ rm -rf -- "$work/release/.npm"
 printf '%s\n' "$revision" > "$work/release/REVISION"
 chown -hR root:root "$work/release"
 chmod 755 "$work/release"
+if [[ -f "$current/.env" ]]; then
+  rm -f -- "$work/release/.env"
+  cp -p -- "$current/.env" "$work/release/.env"
+fi
 mv "$current" "$work/previous"
 rollback=true
 mv "$work/release" "$current"
