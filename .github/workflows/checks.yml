@@ -1,0 +1,25 @@
+name: Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - uses: arduino/setup-arduino-cli@v2
+      - run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:esp32@2.0.18-arduino.5
+          arduino-cli lib install ArduinoIoTCloud@2.10.0
+          cp firmware/doorOpener/arduino_secrets.example.h firmware/doorOpener/arduino_secrets.h
+          arduino-cli compile --fqbn arduino:esp32:nano_nora firmware/doorOpener

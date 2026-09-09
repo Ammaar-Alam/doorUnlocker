@@ -1,0 +1,50 @@
+# Nano ESP32 firmware
+
+Open `doorOpener/doorOpener.ino` in Arduino IDE or use Arduino CLI. This sketch targets the Arduino Nano ESP32, FQBN `arduino:esp32:nano_nora`.
+
+## Wiring
+
+| Nano pin | Connection |
+| --- | --- |
+| D2 | L298N IN1 |
+| D3 | L298N IN2 |
+| D9 | L298N ENA, with its enable jumper removed |
+| GND | Common ground with the motor driver |
+
+Power the motor driver from the motor's supply and power the Nano separately through USB or an appropriate regulated supply. Do not connect the 24 V motor supply to a Nano GPIO or 3.3 V pin.
+
+## Arduino Cloud
+
+Use these variables on the associated Thing:
+
+| Variable | Type | Permission | Update |
+| --- | --- | --- | --- |
+| `doorOpen` | Boolean / Status | Read only | On change |
+| `doorCommand` | Character String | Read and write | On change |
+
+The server uses the property IDs in `.env`. `thingProperties.h` contains this project's device login ID; change it when pairing a different board.
+
+Copy `doorOpener/arduino_secrets.example.h` to `doorOpener/arduino_secrets.h`, then enter the device secret and WiFi settings. The real header is ignored by Git. Arduino Cloud sketch downloads omit secret values, so a downloaded header must be configured before uploading.
+
+## Build and upload
+
+Validated with Arduino ESP32 Boards `2.0.18-arduino.5` and ArduinoIoTCloud `2.10.0`:
+
+```sh
+arduino-cli core install arduino:esp32@2.0.18-arduino.5
+arduino-cli lib install ArduinoIoTCloud@2.10.0
+arduino-cli compile --fqbn arduino:esp32:nano_nora firmware/doorOpener
+arduino-cli board list
+```
+
+Select the Nano's detected USB port in Arduino IDE to upload. If it does not enter upload mode, double-press RESET quickly. Disconnect the motor or string for the first upload and software check.
+
+## Timing and string adjustment
+
+`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms, releasing takes 650 ms, and a shortcut holds for five seconds after the opening stroke completes. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. The same timer continues if the network disconnects.
+
+Normal Open and Close are idempotent. Force Open/Close intentionally run another full stroke, and should be used only while adjusting the string. Repeated shortcut presses do not extend an active hold. Close cancels it. The controller completes a stroke before reversing so a partially wound string is not followed by a full release stroke.
+
+Start with the string released. There is no encoder or position sensor, so firmware cannot determine string tension or its initial physical position after power loss. Test a single cycle while watching the mechanism before leaving it connected.
+
+`npm test` includes a native C++ check of the calibrated timing, duplicate commands, early closing, and clock rollover.
