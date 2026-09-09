@@ -58,11 +58,25 @@ async function checkMechanism(userPage) {
         await page.waitForFunction(value => document.querySelector('canvas').dataset.position === value, target, { timeout: 2000 });
       } catch { errors.push(`${action} did not animate`); }
     }
+    await page.selectOption('#part-select', '');
+    await page.setViewportSize({ width: 844, height: 390 });
+    for (const selector of ['.doorbell-details', '.adjustment-details']) {
+      await page.locator(selector).evaluate(details => { details.open = true; });
+      const panel = await page.locator('.control-panel').boundingBox();
+      await page.mouse.move(panel.x + panel.width / 2, panel.y + panel.height / 2);
+      await page.mouse.wheel(0, 600);
+      await page.waitForTimeout(250);
+      if (!await page.locator(`${selector} button`).first().evaluate(button => {
+        const bounds = button.getBoundingClientRect();
+        const panel = button.closest('.control-panel').getBoundingClientRect();
+        return bounds.top >= panel.top && bounds.bottom <= panel.bottom && button.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2));
+      })) errors.push('Expanded controls are unreachable in a short viewport');
+    }
     await page.request.post('http://localhost:3107/close');
     await page.evaluate(() => { window.requestAnimationFrame = window.__doorCheckFrame; delete window.__doorCheckFrame; });
     page.off('pageerror', captureError);
     if (errors.length) throw new Error([...new Set(errors)].join('; '));
-    return { viewportFit: 'passed', scroll: 'passed', meshSelection: 'passed', animationWithEarlyFrame: 'passed' };
+    return { viewportFit: 'passed', scroll: 'passed', shortViewportControls: 'passed', meshSelection: 'passed', animationWithEarlyFrame: 'passed' };
   } finally {
     await context.close();
   }
