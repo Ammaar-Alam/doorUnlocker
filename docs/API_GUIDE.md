@@ -26,7 +26,7 @@ During protected hours, supply the password in the JSON request body, or use `PO
 
 Successful commands return `{"ok":true,"command":"open","message":"Command sent"}`. This confirms Arduino Cloud accepted the request; it is not a physical-position acknowledgement. Read `/status` or `/events` for the controller's reported state. When offline, `doorOpen` is `null`, not a stale open or closed value.
 
-The Arduino ignores expired commands and commands retained from a previous connection. It times each motor stroke and ignores duplicate normal Open/Close movements. A Close received during the opening stroke completes that calibrated stroke before reversing; a Close after opening starts releasing immediately. Force commands are ignored while a stroke is already running.
+The Arduino ignores expired commands and commands retained from a previous connection. Each Open or Close received while idle runs a full stroke, even when the controller already reports that position. A Close received during the opening stroke completes that calibrated stroke before reversing; a Close after opening starts releasing immediately. Force commands are ignored while a stroke is already running.
 
 Clients own any wait between Open and Close. The `/pulse` endpoint is no longer supported; replace it with separate Open and Close requests. If Close never arrives, the handle remains held.
 
@@ -41,6 +41,8 @@ Errors return `{"ok":false,"message":"…"}` with a suitable HTTP status:
 - `502`: Arduino or notification service failure, including a timeout
 
 Do not automatically retry a command after a timeout: it may already have reached the controller. Check the live state before issuing another action.
+
+The server retries explicit Arduino HTTP 429 responses up to twice within the request timeout, honoring `Retry-After` when provided. Retries keep the same command ID and expiry. Timeouts and other ambiguous failures are not retried. Logs identify failed commands and rate-limited endpoints, including this server's request count in the preceding second.
 
 ## Temporary authentication override
 

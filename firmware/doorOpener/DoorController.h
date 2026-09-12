@@ -12,7 +12,7 @@ constexpr uint32_t OPEN_CRUISE_MS = 600;
 constexpr uint32_t OPEN_SOFT_STOP_MS = 120;
 constexpr int PWM_CLOSE_TARGET = 100;
 constexpr uint32_t CLOSE_RAMP_UP_MS = 100;
-constexpr uint32_t CLOSE_HOLD_MS = 200;
+constexpr uint32_t CLOSE_HOLD_MS = 300;
 constexpr uint32_t CLOSE_RAMP_DOWN_MS = 100;
 
 enum class DoorAction { Open, Close, ForceOpen, ForceClose };
@@ -28,7 +28,7 @@ struct DoorController {
     const bool wantOpen = action != DoorAction::Close && action != DoorAction::ForceClose;
     if (force && moving) return;
     requestedOpen = wantOpen;
-    if (!moving && (open != wantOpen || force)) start(wantOpen, now);
+    if (!moving) start(wantOpen, now);
   }
 
   void update(uint32_t now) {

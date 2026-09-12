@@ -24,8 +24,8 @@ async function upload() {
   const header = readFileSync('firmware/doorOpener/thingProperties.h', 'utf8');
   const deviceId = header.match(/DEVICE_LOGIN_NAME\[\]\s*=\s*"([0-9a-f-]{36})"/)?.[1];
   if (!deviceId) throw new Error('Missing device ID in thingProperties.h');
-  const device = cloud('device', 'show', '--device-id', deviceId);
-  if (device.id !== deviceId || device.fqbn !== 'arduino:esp32:nano_nora' || device.status !== 'ONLINE') {
+  const device = cloud('device', 'list', '--device-ids', deviceId).find(device => device.id === deviceId);
+  if (!device || device.fqbn !== 'arduino:esp32:nano_nora' || device.status !== 'ONLINE') {
     throw new Error('The configured Nano ESP32 must be online before updating');
   }
 
