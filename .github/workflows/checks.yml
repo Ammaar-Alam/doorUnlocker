@@ -3,13 +3,30 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
   test:
     runs-on: ubuntu-latest
+    outputs:
+      firmware_changed: ${{ steps.firmware.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect firmware changes
+        id: firmware
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          else
+            changed=$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" -- firmware/ .github/ota-upload.mjs .github/workflows/checks.yml)
+            if [[ -n "$changed" ]]; then echo 'changed=true' >> "$GITHUB_OUTPUT"; fi
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -24,6 +41,50 @@ jobs:
           arduino-cli lib install ArduinoIoTCloud@2.10.0
           cp firmware/doorOpener/arduino_secrets.example.h firmware/doorOpener/arduino_secrets.h
           arduino-cli compile --fqbn arduino:esp32:nano_nora firmware/doorOpener
+  firmware:
+    needs: test
+    if: needs.test.outputs.firmware_changed == 'true' && github.ref == 'refs/heads/main' && github.repository == 'Ammaar-Alam/doorUnlocker'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: door-unlocker
+    concurrency:
+      group: door-arduino-ota
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install Arduino Cloud CLI
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl -fsSL --retry 3 https://github.com/arduino/arduino-cloud-cli/releases/download/0.8.0/arduino-cloud-cli_0.8.0_Linux_64bit.tar.gz -o arduino-cloud-cli.tar.gz
+          echo 'de229296a339732c706342b41c73894418be9c487baaa7474068129ab2a30337  arduino-cloud-cli.tar.gz' | sha256sum -c -
+          mkdir cloud-cli
+          tar -xzf arduino-cloud-cli.tar.gz -C cloud-cli
+          echo "$RUNNER_TEMP/cloud-cli" >> "$GITHUB_PATH"
+      - name: Build device firmware
+        env:
+          ARDUINO_SECRETS_HEADER: ${{ secrets.ARDUINO_SECRETS_HEADER }}
+        run: |
+          test -n "$ARDUINO_SECRETS_HEADER"
+          umask 077
+          printf '%s\n' "$ARDUINO_SECRETS_HEADER" > firmware/doorOpener/arduino_secrets.h
+          arduino-cli core update-index
+          arduino-cli core install arduino:esp32@2.0.18-arduino.5
+          arduino-cli lib install ArduinoIoTCloud@2.10.0
+          arduino-cli compile --fqbn arduino:esp32:nano_nora --output-dir "$RUNNER_TEMP/door-firmware" firmware/doorOpener
+      - name: Upload and verify firmware
+        env:
+          ARDUINO_CLOUD_CLIENT: ${{ secrets.ARDUINO_CLOUD_CLIENT }}
+          ARDUINO_CLOUD_SECRET: ${{ secrets.ARDUINO_CLOUD_SECRET }}
+        run: node .github/ota-upload.mjs "$RUNNER_TEMP/door-firmware/doorOpener.ino.bin"
+      - name: Remove device credentials and binaries
+        if: always()
+        run: |
+          rm -f firmware/doorOpener/arduino_secrets.h
+          rm -rf "$RUNNER_TEMP/door-firmware"
   deploy:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Ammaar-Alam/doorUnlocker'
