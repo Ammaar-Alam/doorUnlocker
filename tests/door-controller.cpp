@@ -1,4 +1,5 @@
 #include "../firmware/doorOpener/DoorController.h"
+#include "../firmware/doorOpener/ProximityController.h"
 #include <assert.h>
 #include <limits.h>
 
@@ -80,4 +81,41 @@ int main() {
   assert(door.moving && !door.opening);
   door.update(uint32_t(start + 6470));
   assert(!door.open && !door.moving);
+
+  ProximityController proximity;
+  DoorAction action;
+  assert(proximity.interval() == 1000);
+  assert(!proximity.sample(-80, action));
+  assert(proximity.interval() == 100);
+  assert(!proximity.sample(-50, action));
+  assert(!proximity.sample(127, action));
+  assert(!proximity.sample(-45, action));
+  assert(!proximity.sample(-51, action));
+  assert(!proximity.sample(-50, action));
+  assert(proximity.sample(-45, action) && action == DoorAction::ProximityOpen);
+  DoorController automatic;
+  automatic.command(action, 0);
+  automatic.command(action, 100);
+  automatic.update(970);
+  assert(automatic.open && !automatic.moving);
+  automatic.command(action, 1000);
+  assert(!automatic.moving);
+  for (int i = 0; i < 20; ++i) assert(!proximity.sample(-40, action));
+  for (int i = 0; i < 4; ++i) assert(!proximity.sample(-70, action));
+  assert(!proximity.sample(-64, action));
+  for (int i = 0; i < 4; ++i) assert(!proximity.sample(-65, action));
+  assert(proximity.sample(-90, action) && action == DoorAction::ProximityClose);
+  assert(proximity.interval() == 1000);
+  automatic.command(action, 1000);
+  automatic.update(1500);
+  assert(!automatic.open && !automatic.moving);
+  automatic.command(action, 1600);
+  assert(!automatic.moving);
+  assert(!proximity.disconnected(action));
+  assert(!proximity.sample(-45, action));
+  assert(proximity.sample(-45, action));
+  assert(proximity.disconnected(action) && action == DoorAction::ProximityClose);
+  assert(!proximity.disconnected(action));
+  assert(!proximity.sample(-45, action));
+  assert(proximity.sample(-45, action));
 }

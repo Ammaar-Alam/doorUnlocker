@@ -54,6 +54,16 @@ OTA reboots the board. Keep the handle released and avoid motor commands during 
 
 Uploading a binary does not synchronize the Cloud editor's source files. GitHub is the firmware source of truth; the editor can still show an older sketch after a successful OTA upload.
 
+## Bluetooth proximity
+
+The board advertises as **Ammaar's Door Opener**. Connect using a BLE app such as nRF Connect. On first pairing, open USB Serial Monitor at 9600 baud and enter the six-digit pairing code shown there into the phone's pairing prompt. Pairing uses authenticated encryption and saved Bluetooth bonds; later connections do not need the laptop. Unpaired or unauthenticated connections cannot operate the motor. Keep the board powered after unplugging USB.
+
+Two consecutive RSSI readings at or above **−50 dBm** request Open. Five consecutive readings at or below **−65 dBm** request Close. Sampling runs once per second below −80 dBm, and every 100 ms at or above −80 dBm or while proximity holds the handle open. These thresholds are in `ProximityController.h`.
+
+Each approach and departure emits one command, so staying nearby does not wind repeatedly. Intermediate readings reset the applicable counter. Invalid readings do not count; disconnecting or receiving no valid readings for three seconds releases a handle opened by proximity. Explicit website commands still retain their normal repeat-stroke behavior.
+
+There is no fixed five-second hold. RSSI is not a distance or door-position sensor, and can also trigger from inside the room. First pair with motor power disconnected, then test one supervised approach/departure cycle. Check operation with the phone pocketed, locked, and the BLE app in the background; the phone must maintain or re-establish the BLE connection for proximity to work. Initial opening still requires the full motor stroke after the signal threshold is confirmed.
+
 ## Timing and string adjustment
 
 `DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 500 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A completed opening stays held until a Close command arrives.
