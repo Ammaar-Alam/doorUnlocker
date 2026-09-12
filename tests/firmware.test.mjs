@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-test('motor timing, repeat commands, early close, and clock rollover', () => {
+test('motor timing, proximity thresholds, repeat commands, and clock rollover', () => {
   const directory = mkdtempSync(join(tmpdir(), 'door-controller-'));
   try {
     const executable = join(directory, 'check');

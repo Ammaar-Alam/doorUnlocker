@@ -15,7 +15,7 @@ constexpr uint32_t CLOSE_RAMP_UP_MS = 100;
 constexpr uint32_t CLOSE_HOLD_MS = 300;
 constexpr uint32_t CLOSE_RAMP_DOWN_MS = 100;
 
-enum class DoorAction { Open, Close, ForceOpen, ForceClose };
+enum class DoorAction { Open, Close, ForceOpen, ForceClose, ProximityOpen, ProximityClose };
 
 struct DoorController {
   bool open = false;
@@ -25,8 +25,10 @@ struct DoorController {
 
   void command(DoorAction action, uint32_t now) {
     const bool force = action == DoorAction::ForceOpen || action == DoorAction::ForceClose;
-    const bool wantOpen = action != DoorAction::Close && action != DoorAction::ForceClose;
+    const bool wantOpen = action != DoorAction::Close && action != DoorAction::ForceClose && action != DoorAction::ProximityClose;
     if (force && moving) return;
+    const bool proximity = action == DoorAction::ProximityOpen || action == DoorAction::ProximityClose;
+    if (proximity && (moving ? requestedOpen : open) == wantOpen) return;
     requestedOpen = wantOpen;
     if (!moving) start(wantOpen, now);
   }

@@ -1,5 +1,6 @@
 #include "thingProperties.h"
 #include "DoorController.h"
+#include "BluetoothProximity.h"
 #include <stdlib.h>
 #include <atomic>
 #include <freertos/FreeRTOS.h>
@@ -68,6 +69,7 @@ void setup() {
     Serial.println("Motor controller could not start");
     while (true) delay(1000);
   }
+  BluetoothProximity::begin(commands);
   initProperties();
   ArduinoCloud.addCallback(ArduinoIoTCloudEvent::SYNC, onCloudSync);
   ArduinoCloud.addCallback(ArduinoIoTCloudEvent::DISCONNECT, onCloudDisconnect);
