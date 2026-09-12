@@ -56,9 +56,9 @@ Uploading a binary does not synchronize the Cloud editor's source files. GitHub 
 
 ## Timing and string adjustment
 
-`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 400 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A completed opening stays held until a Close command arrives.
+`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 500 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A completed opening stays held until a Close command arrives.
 
-Normal Open and Close are idempotent. Force Open/Close intentionally run another full stroke, and should be used only while adjusting the string. The controller completes a stroke before reversing so a partially wound string is not followed by a full release stroke.
+Each Open or Close received while idle runs a full stroke, regardless of the reported position. The controller completes a stroke before reversing so a partially wound string is not followed by a full release stroke. Force Open/Close also run a full stroke while idle and are ignored during movement.
 
 Start with the string released. There is no encoder or position sensor, so firmware cannot determine string tension or its initial physical position after power loss. Test a single cycle while watching the mechanism before leaving it connected.
 

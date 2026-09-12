@@ -26,7 +26,11 @@ const mode = process.env.TEST_MODE;
 const previous = fs.readFileSync(process.env.TEST_LOG, 'utf8');
 fs.appendFileSync(process.env.TEST_LOG, args.slice(0, 2).join(' ') + '\\n');
 let result = {id:'ota-1', device_id:'${device}', status:'pending'};
-if (args[0] === 'device') result = {id:'${device}', fqbn:mode === 'wrong-board' ? 'other' : 'arduino:esp32:nano_nora', status:mode === 'offline' ? 'OFFLINE' : 'ONLINE'};
+if (args[0] === 'device') {
+  if (args[1] === 'show') { console.error('retrieving device network configuration, 429 Too Many Requests'); process.exit(1); }
+  if (args[1] !== 'list' || args[args.indexOf('--device-ids') + 1] !== '${device}') process.exit(1);
+  result = mode === 'missing' ? [] : [{id:'${device}', fqbn:mode === 'wrong-board' ? 'other' : 'arduino:esp32:nano_nora', status:mode === 'offline' ? 'OFFLINE' : 'ONLINE'}];
+}
 else if (args[1] === 'upload' && mode === 'conflict') result = [{status:'skipped'}, result];
 else if (args[1] === 'status') {
   if (mode === 'failed') result = {...result, status:'failed', error_reason:'download failed'};
@@ -47,15 +51,15 @@ console.log(JSON.stringify(result));
   };
   assert.equal((await run('success', 'b'.repeat(40))).status, 0);
   assert.equal(await readFile(log, 'utf8'), '', 'Superseded commits never contact Arduino');
-  for (const mode of ['offline', 'wrong-board', 'conflict', 'failed', 'mismatch', 'invalid']) {
-    const result = await run(mode);
-    assert.equal(result.status, 1, mode);
-    assert.equal(await readFile(summary, 'utf8'), '', mode);
-    const calls = await readFile(log, 'utf8');
-    assert.equal(calls.split('ota upload').length - 1, ['offline', 'wrong-board'].includes(mode) ? 0 : 1, mode);
-  }
   const result = await run('pending');
   assert.equal(result.status, 0, result.stderr);
   assert.equal((await readFile(log, 'utf8')).split('ota status').length - 1, 2);
   assert.match(await readFile(summary, 'utf8'), /ota-1.*succeeded/);
+  for (const mode of ['offline', 'wrong-board', 'missing', 'conflict', 'failed', 'mismatch', 'invalid']) {
+    const result = await run(mode);
+    assert.equal(result.status, 1, mode);
+    assert.equal(await readFile(summary, 'utf8'), '', mode);
+    const calls = await readFile(log, 'utf8');
+    assert.equal(calls.split('ota upload').length - 1, ['offline', 'wrong-board', 'missing'].includes(mode) ? 0 : 1, mode);
+  }
 });

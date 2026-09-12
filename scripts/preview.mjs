@@ -13,14 +13,14 @@ Object.assign(process.env, {
 let open = false;
 let requestedOpen = false;
 let strokeTimer;
-function move(next, force = false) {
+function move(next) {
   requestedOpen = next;
-  if (strokeTimer || (open === next && !force)) return;
+  if (strokeTimer) return;
   strokeTimer = setTimeout(() => {
     strokeTimer = null;
     open = next;
     if (requestedOpen !== open) move(requestedOpen);
-  }, next ? 970 : 400);
+  }, next ? 970 : 500);
 }
 globalThis.fetch = async (url, options = {}) => {
   const path = String(url);
@@ -31,7 +31,7 @@ globalThis.fetch = async (url, options = {}) => {
     const force = action.startsWith('force-');
     if (!(force && strokeTimer)) {
       const next = !action.includes('close');
-      move(next, force);
+      move(next);
     }
     return new Response(null, { status: 204 });
   }

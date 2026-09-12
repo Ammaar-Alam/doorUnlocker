@@ -13,7 +13,7 @@ process.env.COMMAND_PROPERTY_ID = "test-command";
 process.env.CLIENT_ID = "test-client";
 process.env.CLIENT_SECRET = crypto.randomUUID();
 process.env.STATUS_POLL_INTERVAL_MS = "20";
-process.env.ARDUINO_HTTP_TIMEOUT_MS = "100";
+process.env.ARDUINO_HTTP_TIMEOUT_MS = "1500";
 
 const realFetch = globalThis.fetch;
 let doorOpen = false;
@@ -26,8 +26,17 @@ let cloudReads = 0;
 let publishes = [];
 let publishGate = null;
 let stallBody = false;
+let limitedPath = "";
+let limitsRemaining = 0;
+let retryAfter = "0";
+let attempts = [];
+let timeoutPublish = false;
 globalThis.fetch = async (url, options = {}) => {
   assert.ok(String(url).startsWith("https://api2.arduino.cc/"), "Only Arduino is replaced by this test");
+  if (limitedPath && String(url).endsWith(limitedPath)) {
+    attempts.push({ body: options.body, at: Date.now(), signal: options.signal });
+    if (limitsRemaining-- > 0) return new Response(null, { status: 429, headers: retryAfter === null ? {} : { "Retry-After": retryAfter } });
+  }
   if (String(url).endsWith("/clients/token")) {
     tokenRequests++;
     return Response.json({ access_token: `token-${tokenRequests}`, expires_in: 3600 });
@@ -37,6 +46,7 @@ globalThis.fetch = async (url, options = {}) => {
     return new Response(null, { status: 401 });
   }
   if (String(url).endsWith("/publish")) {
+    if (timeoutPublish) throw new DOMException("Publish timed out", "TimeoutError");
     if (publishGate) await publishGate;
     if (failPublish) return new Response(null, { status: 503 });
     publishes.push(JSON.parse(options.body).value);
@@ -128,6 +138,41 @@ test("door API and shared status", async t => {
   online = true;
   await delay(25);
 
+  for (const path of ["/test-device", "/test-command/publish"]) {
+    limitedPath = path;
+    limitsRemaining = 1;
+    attempts = [];
+    await delay(25);
+    assert.equal((await post("/close", {})).status, 200, `Close survives a rate-limited ${path}`);
+    assert.equal(attempts.length, 2);
+    assert.equal(attempts[0].signal, attempts[1].signal, "Retries share the original request deadline");
+    if (path.endsWith("publish")) assert.equal(attempts[0].body, attempts[1].body, "Retries preserve command ID and expiry");
+  }
+  for (const header of ["1", new Date(Date.now() + 2000).toUTCString(), null, "invalid"]) {
+    retryAfter = header;
+    limitsRemaining = 1;
+    attempts = [];
+    assert.equal((await post("/close", {})).status, 200);
+    const minimum = header === "1" || header === null || header === "invalid" ? 1000 : Math.max(0, Date.parse(header) - attempts[0].at);
+    assert.ok(attempts[1].at - attempts[0].at >= minimum - 10, "Retry-After or fallback delay is respected");
+  }
+  for (const [header, count] of [["0", 3], ["60", 1]]) {
+    retryAfter = header;
+    limitsRemaining = 99;
+    attempts = [];
+    const before = publishes.length;
+    assert.equal((await post("/close", {})).status, 502);
+    assert.equal(attempts.length, count, "Retries are bounded by attempts and request deadline");
+    assert.equal(publishes.length, before);
+  }
+  limitsRemaining = 0;
+  timeoutPublish = true;
+  attempts = [];
+  assert.equal((await post("/close", {})).status, 502);
+  assert.equal(attempts.length, 1, "Ambiguous publish timeouts are not retried");
+  timeoutPublish = false;
+  limitedPath = "";
+
   let release;
   publishGate = new Promise(resolve => { release = resolve; });
   const firstCommand = post("/open", {});
@@ -142,9 +187,15 @@ test("door API and shared status", async t => {
   assert.equal(response.status, 502);
   assert.equal((await response.json()).ok, false);
   failPublish = false;
+  limitedPath = "/clients/token";
+  retryAfter = "0";
+  limitsRemaining = 1;
+  attempts = [];
   refreshToken = true;
   assert.equal((await post("/close", {})).status, 200);
   assert.equal(tokenRequests, 2);
+  assert.equal(attempts.length, 2, "Token requests also recover from rate limits");
+  limitedPath = "";
 
   propertyValue = null;
   await delay(25);

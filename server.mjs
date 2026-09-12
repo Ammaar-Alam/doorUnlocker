@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { setTimeout as sleep } from "node:timers/promises";
 
 dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || ".env" });
 
@@ -100,19 +101,39 @@ api.post("/login", (req, res) => {
 let accessToken = null;
 let tokenExpiresAt = 0;
 let tokenInFlight = null;
+let recentArduinoRequests = [];
+
+async function arduinoFetch(path, options = {}) {
+  const startedAt = Date.now();
+  const signal = options.signal || AbortSignal.timeout(ARDUINO_HTTP_TIMEOUT_MS);
+  for (let attempt = 0; ; attempt++) {
+    const now = Date.now();
+    recentArduinoRequests = recentArduinoRequests.filter(time => now - time < 1000);
+    const requestCount = recentArduinoRequests.push(now);
+    const response = await fetch(`https://api2.arduino.cc/iot/${path}`, { ...options, signal });
+    if (response.status === 429) console.warn(`Arduino ${options.method || "GET"} ${path}: 429; ${requestCount} server requests in preceding second; Retry-After=${response.headers.get("Retry-After")}`);
+    if (response.status !== 429 || attempt === 2) return response;
+    const retryAfter = response.headers.get("Retry-After");
+    const requestedDelay = /^\d+$/.test(retryAfter ?? "") ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now();
+    const delay = Number.isFinite(requestedDelay) ? Math.max(0, requestedDelay) : 1000 * (attempt + 1);
+    if (delay >= ARDUINO_HTTP_TIMEOUT_MS - (Date.now() - startedAt)) return response;
+    await response.body?.cancel();
+    console.warn(`Arduino ${options.method || "GET"} ${path}: 429, retry ${attempt + 1}/2 in ${delay} ms`);
+    await sleep(delay, undefined, { signal });
+  }
+}
 
 async function getAccessToken() {
   if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
   if (tokenInFlight) return tokenInFlight;
   tokenInFlight = (async () => {
-    const response = await fetch("https://api2.arduino.cc/iot/v1/clients/token", {
+    const response = await arduinoFetch("v1/clients/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "client_credentials", client_id: process.env.CLIENT_ID,
         client_secret: process.env.CLIENT_SECRET, audience: "https://api2.arduino.cc/iot",
       }),
-      signal: AbortSignal.timeout(ARDUINO_HTTP_TIMEOUT_MS),
     });
     if (!response.ok) throw new Error(`Arduino authentication failed (${response.status})`);
     const data = await response.json();
@@ -129,18 +150,18 @@ async function getAccessToken() {
 }
 
 async function arduinoRequest(path, options = {}, retryAuth = true) {
+  options = { ...options, signal: options.signal || AbortSignal.timeout(ARDUINO_HTTP_TIMEOUT_MS) };
   const token = await getAccessToken();
-  const response = await fetch(`https://api2.arduino.cc/iot/v2/${path}`, {
+  const response = await arduinoFetch(`v2/${path}`, {
     ...options,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(ARDUINO_HTTP_TIMEOUT_MS),
   });
   if (response.status === 401 && retryAuth) {
     await response.arrayBuffer();
     if (accessToken === token) accessToken = null;
     return arduinoRequest(path, options, false);
   }
-  if (!response.ok) throw new Error(`Arduino request failed (${response.status})`);
+  if (!response.ok) throw new Error(`Arduino ${options.method || "GET"} ${path} failed (${response.status})`);
   if (options.method === "PUT") {
     await response.arrayBuffer();
     return;
@@ -250,6 +271,7 @@ async function handleDoorCommand(res, command, next) {
     res.json({ ok: true, command, message: "Command sent" });
     void broadcastStatus();
   } catch (error) {
+    console.warn(`Door command ${command} failed:`, error.message);
     next(error);
   } finally {
     commandInFlight = false;
