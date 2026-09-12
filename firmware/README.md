@@ -39,6 +39,21 @@ arduino-cli board list
 
 Select the Nano's detected USB port in Arduino IDE to upload. If it does not enter upload mode, double-press RESET quickly. Disconnect the motor or string for the first upload and software check.
 
+## Automatic OTA uploads
+
+The GitHub `Checks` workflow uploads firmware through Arduino Cloud after tests pass on `main` when firmware or its deployment configuration changes. Pull requests only run checks. Run `Checks` manually on `main` to retry an update without another code change.
+
+Configure these GitHub environment secrets in `door-unlocker`:
+
+- `ARDUINO_CLOUD_CLIENT` and `ARDUINO_CLOUD_SECRET`: an Arduino Cloud API key
+- `ARDUINO_SECRETS_HEADER`: the complete configured `arduino_secrets.h` file
+
+The device ID comes from `thingProperties.h`. The board must be online, already running OTA-capable Arduino Cloud firmware, and have an OTA-enabled Cloud plan. The workflow compiles with the private device/Wi-Fi configuration and waits for the specific OTA job to succeed. Firmware binaries contain credentials and are not published as GitHub artifacts.
+
+OTA reboots the board. Keep the handle released and avoid motor commands during an update. The first upload may require USB if the installed firmware does not support OTA. The GitHub job summary records the deployed commit and OTA ID; an accepted upload request alone is not completion. After an upload timeout, inspect that OTA ID before retrying.
+
+Uploading a binary does not synchronize the Cloud editor's source files. GitHub is the firmware source of truth; the editor can still show an older sketch after a successful OTA upload.
+
 ## Timing and string adjustment
 
 `DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 400 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A completed opening stays held until a Close command arrives.
