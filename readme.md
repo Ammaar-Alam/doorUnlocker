@@ -50,7 +50,7 @@ npm start
 
 Open [localhost:3000](http://localhost:3000). The website shares the controller’s reported state across connected browsers. See the [API guide](docs/API_GUIDE.md) for other clients and authentication settings.
 
-Opening runs a calibrated 970 ms stroke; releasing runs for 650 ms. Normal commands do not repeat a stroke that has already completed. **Adjust the string** exposes force controls for an extra stroke. Calibrate the timings for your own motor and handle.
+Opening runs a calibrated 970 ms stroke; releasing runs for 400 ms. Normal commands do not repeat a stroke that has already completed. **Adjust the string** exposes force controls for an extra stroke. Calibrate the timings for your own motor and handle.
 
 There is no position sensor: status describes the controller’s state, not whether the physical door is shut. Start with the string released and watch the first powered cycle.
 

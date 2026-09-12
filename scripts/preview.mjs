@@ -20,7 +20,7 @@ function move(next, force = false) {
     strokeTimer = null;
     open = next;
     if (requestedOpen !== open) move(requestedOpen);
-  }, next ? 970 : 650);
+  }, next ? 970 : 400);
 }
 globalThis.fetch = async (url, options = {}) => {
   const path = String(url);

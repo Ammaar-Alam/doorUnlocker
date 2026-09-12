@@ -335,7 +335,7 @@ async function createMechanism() {
     { id: 'line', name: 'Fishing line', description: 'A light, flexible link between the motor and handle. An arbor knot anchors the spindle end; a round turn and half hitches secure the handle end under tape.', specs: 'Pulls to open · Slackens to release', group: fishingLine, x: .70, y: .20 },
     { id: 'spindle', name: 'Printed spindle', description: 'The arbor knot grips this custom spool as it gathers the line. Raised rims keep the winding in place, turning the motor’s rotation into a short pull on the handle.', specs: '25 mm diameter · 13 mm tall', group: spindle, point: [-12, 4, 13], x: .06, y: .34 },
     { id: 'driver', name: 'L298N driver', description: 'An H-bridge reverses the motor’s supply to wind or release the line. The Nano sets direction and ramps the drive signal for a gentler start and stop; the heat sink carries away heat.', specs: '2 motor channels · 1 in use', group: driver, point: [15, 0, 12], x: .77, y: .43 },
-    { id: 'motor', name: 'Gearmotor', description: 'The BRINGSMART worm gearmotor trades speed for pulling torque through a right-angle gearbox. The calibrated opening stroke takes up the line; a shorter, gentler reverse stroke releases it.', specs: '24 V motor · 0.97 s open · 0.65 s release', group: motor, point: [-10, -61, 8], x: .06, y: .56 },
+    { id: 'motor', name: 'Gearmotor', description: 'The BRINGSMART worm gearmotor trades speed for pulling torque through a right-angle gearbox. The calibrated opening stroke takes up the line; a shorter, gentler reverse stroke releases it.', specs: '24 V motor · 0.97 s open · 0.40 s release', group: motor, point: [-10, -61, 8], x: .06, y: .56 },
     { id: 'nano', name: 'Nano ESP32', description: 'Receives commands over Wi-Fi and times each motor stroke on the board.', specs: 'ESP32-S3 · 16 MB flash · USB-C', group: nano, point: [8, 8, 3], x: .77, y: .62 },
     { id: 'breadboard', name: 'Mini breadboard', description: 'Metal strips connect each group of five holes without soldering. The center gap keeps the Nano’s two pin headers separate, while jumper wires connect the driver.', specs: '170 contacts · 2.54 mm pitch', group: breadboard },
     { id: 'base', name: 'Printed base', description: 'The motor cradle and mounting plate hold the moving parts and electronics together. Adhesive mounting strips secure the printed assembly to the door.', specs: '140.7 × 123.3 mm · Original print model', group: base, point: [-62, -42, 10], x: .06, y: .77 },
@@ -513,7 +513,7 @@ async function createMechanism() {
     if (!frame && !document.hidden) frame = requestAnimationFrame(render);
   }
   function animate(open, start = performance.now()) {
-    motion = { from: position, to: open ? 1 : 0, opening: open, start, duration: open ? 970 : 650 };
+    motion = { from: position, to: open ? 1 : 0, opening: open, start, duration: open ? 970 : 400 };
     if (performance.now() - start >= motion.duration) motion = null;
     else if (reducedMotion.matches || document.hidden) { pose(motion.to); motion = null; }
     requestRender();
