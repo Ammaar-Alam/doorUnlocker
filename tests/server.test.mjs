@@ -72,13 +72,17 @@ test("door API and shared status", async t => {
   await delay(50);
   assert.equal(cloudReads, 0, "No background cloud polling without viewers");
 
-  for (const path of ["/open", "/close", "/command", "/emergency-close", "/api/open", "/pulse", "/force-open", "/force-close"]) {
+  for (const path of ["/open", "/close", "/command", "/emergency-close", "/api/open", "/force-open", "/force-close"]) {
     const response = await post(path, { command: "open" });
     assert.equal(response.status, 200);
     assert.match(response.headers.get("content-type"), /application\/json/);
     assert.equal((await response.json()).ok, true);
   }
-  assert.ok(publishes.every(value => /^(open|close|pulse|force-open|force-close):[0-9]+:[0-9a-f-]+$/.test(value)));
+  assert.ok(publishes.every(value => /^(open|close|force-open|force-close):[0-9]+:[0-9a-f-]+$/.test(value)));
+  const beforeUnsupported = publishes.length;
+  assert.equal((await post("/pulse", {})).status, 404);
+  assert.equal((await post("/command", { command: "pulse" })).status, 400);
+  assert.equal(publishes.length, beforeUnsupported);
   assert.equal(new Set(publishes).size, publishes.length);
   assert.equal(tokenRequests, 1, "OAuth token is shared across requests");
   assert.equal((await (await request("/status")).json()).doorOpen, false,
@@ -166,7 +170,7 @@ test("door API and shared status", async t => {
   assert.equal(response.status, 400);
   await post("/admin/set-auth-required", { enabled: true }, adminHeaders);
   assert.equal((await post("/open", {})).status, 401);
-  assert.equal((await post("/pulse", { password: process.env.PASSWORD })).status, 200);
+  assert.equal((await post("/open", { password: process.env.PASSWORD })).status, 200);
   assert.equal((await post("/open", {}, { Authorization: `Bearer ${token}` })).status, 200);
   assert.equal((await request("/auth-status", { headers: { Cookie: `authToken=${token}` } }).then(r => r.json())).authenticated, true);
 });
