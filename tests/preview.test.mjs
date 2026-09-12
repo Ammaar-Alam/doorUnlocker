@@ -54,10 +54,11 @@ test('local preview serves the original spindle and shares reported state', { ti
     assert.fail('Controller state was not reported');
   }
   await Promise.all(readers.map(reader => state(reader, false)));
-  assert.equal((await command('pulse')).status, 200);
+  assert.equal((await command('open')).status, 200);
   assert.equal((await (await request('/status')).json()).doorOpen, false, 'Publishing does not imply the handle has moved');
   await Promise.all(readers.map(reader => state(reader, true)));
-  const heldAt = Date.now();
+  await new Promise(resolve => setTimeout(resolve, 5100));
+  assert.equal((await (await request('/status')).json()).doorOpen, true, 'Handle stays open until Close is requested');
+  assert.equal((await command('close')).status, 200);
   await Promise.all(readers.map(reader => state(reader, false)));
-  assert.ok(Date.now() - heldAt >= 5000, 'Both viewers observe the device-owned hold before release');
 });

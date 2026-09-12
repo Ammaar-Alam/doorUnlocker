@@ -14,9 +14,8 @@ constexpr int PWM_CLOSE_TARGET = 100;
 constexpr uint32_t CLOSE_RAMP_UP_MS = 100;
 constexpr uint32_t CLOSE_HOLD_MS = 450;
 constexpr uint32_t CLOSE_RAMP_DOWN_MS = 100;
-constexpr uint32_t OPEN_HOLD_MS = 5000;
 
-enum class DoorAction { Open, Close, Pulse, ForceOpen, ForceClose };
+enum class DoorAction { Open, Close, ForceOpen, ForceClose };
 
 struct DoorController {
   bool open = false;
@@ -28,11 +27,6 @@ struct DoorController {
     const bool force = action == DoorAction::ForceOpen || action == DoorAction::ForceClose;
     const bool wantOpen = action != DoorAction::Close && action != DoorAction::ForceClose;
     if (force && moving) return;
-    if (!wantOpen) pulse = false;
-    if (action == DoorAction::Pulse && !pulse) {
-      pulse = true;
-      heldSince = now;
-    }
     requestedOpen = wantOpen;
     if (!moving && (open != wantOpen || force)) start(wantOpen, now);
   }
@@ -47,25 +41,17 @@ struct DoorController {
         pwm = 0;
         moving = false;
         open = opening;
-        if (open) heldSince = now;
         // complete a stroke before reversing to preserve calibrated string travel
         if (requestedOpen != open) start(requestedOpen, now);
       } else {
         pwm = profile(elapsed);
       }
     }
-    if (pulse && open && !moving && uint32_t(now - heldSince) >= OPEN_HOLD_MS) {
-      pulse = false;
-      requestedOpen = false;
-      start(false, now);
-    }
   }
 
 private:
   bool requestedOpen = false;
-  bool pulse = false;
   uint32_t startedAt = 0;
-  uint32_t heldSince = 0;
 
   void start(bool wantOpen, uint32_t now) {
     moving = true;

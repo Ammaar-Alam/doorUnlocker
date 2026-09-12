@@ -4,7 +4,7 @@
 
 int main() {
   DoorController door;
-  door.command(DoorAction::Pulse, 0);
+  door.command(DoorAction::Open, 0);
   assert(door.moving && door.opening && !door.open);
   for (uint32_t t = 0; t < 970; ++t) {
     door.update(t);
@@ -12,18 +12,20 @@ int main() {
   }
   door.update(970);
   assert(door.open && !door.moving && door.pwm == 0);
-  door.command(DoorAction::Pulse, 3000);
+  door.command(DoorAction::Open, 3000);
   door.command(DoorAction::Open, 4000);
   door.update(5969);
   assert(door.open && !door.moving);
   door.update(5970);
+  assert(door.open && !door.moving && door.pwm == 0);
+  door.command(DoorAction::Close, 5970);
   assert(door.moving && !door.opening);
   door.update(6620);
   assert(!door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 6700);
   assert(!door.moving);
 
-  door.command(DoorAction::Pulse, 7000);
+  door.command(DoorAction::Open, 7000);
   door.update(7970);
   door.command(DoorAction::Close, 8100);
   assert(door.moving && !door.opening);
@@ -44,19 +46,23 @@ int main() {
   door.update(18620);
   assert(!door.open && !door.moving);
 
-  door.command(DoorAction::Pulse, 20000);
+  door.command(DoorAction::Open, 20000);
   door.command(DoorAction::ForceClose, 20020);
   door.update(20970);
   assert(door.open && !door.moving);
   door.update(25970);
+  assert(door.open && !door.moving && door.pwm == 0);
+  door.command(DoorAction::Close, 25970);
   assert(door.moving && !door.opening);
   door.update(26620);
   assert(!door.open && !door.moving && door.pwm == 0);
 
   const uint32_t start = UINT32_MAX - 100;
-  door.command(DoorAction::Pulse, start);
+  door.command(DoorAction::Open, start);
   door.update(uint32_t(start + 970));
   door.update(uint32_t(start + 5970));
+  assert(door.open && !door.moving && door.pwm == 0);
+  door.command(DoorAction::Close, uint32_t(start + 5970));
   assert(door.moving && !door.opening);
   door.update(uint32_t(start + 6620));
   assert(!door.open && !door.moving);

@@ -94,7 +94,6 @@ void onDoorCommandChange() {
   DoorAction command;
   if (action == "open") command = DoorAction::Open;
   else if (action == "close") command = DoorAction::Close;
-  else if (action == "pulse") command = DoorAction::Pulse;
   else if (action == "force-open") command = DoorAction::ForceOpen;
   else if (action == "force-close") command = DoorAction::ForceClose;
   else return;

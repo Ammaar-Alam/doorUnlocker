@@ -12,8 +12,6 @@ Object.assign(process.env, {
 
 let open = false;
 let requestedOpen = false;
-let pulse = false;
-let pulseTimer;
 let strokeTimer;
 function move(next, force = false) {
   requestedOpen = next;
@@ -22,12 +20,7 @@ function move(next, force = false) {
     strokeTimer = null;
     open = next;
     if (requestedOpen !== open) move(requestedOpen);
-    else if (pulse && open) hold();
   }, next ? 970 : 650);
-}
-function hold() {
-  clearTimeout(pulseTimer);
-  pulseTimer = setTimeout(() => { pulse = false; move(false); }, 5000);
 }
 globalThis.fetch = async (url, options = {}) => {
   const path = String(url);
@@ -38,11 +31,6 @@ globalThis.fetch = async (url, options = {}) => {
     const force = action.startsWith('force-');
     if (!(force && strokeTimer)) {
       const next = !action.includes('close');
-      if (!next) { pulse = false; clearTimeout(pulseTimer); }
-      if (action === 'pulse' && !pulse) {
-        pulse = true;
-        if (open && !strokeTimer) hold();
-      }
       move(next, force);
     }
     return new Response(null, { status: 204 });
@@ -57,7 +45,7 @@ export async function startPreview(port = 3107) {
   const { app, startServer } = await import('../server.mjs');
   app.locals.preview = true;
   const server = startServer(port);
-  server.on('close', () => { clearTimeout(pulseTimer); clearTimeout(strokeTimer); });
+  server.on('close', () => clearTimeout(strokeTimer));
   return server;
 }
 

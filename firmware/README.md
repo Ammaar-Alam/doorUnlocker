@@ -41,9 +41,9 @@ Select the Nano's detected USB port in Arduino IDE to upload. If it does not ent
 
 ## Timing and string adjustment
 
-`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms, releasing takes 650 ms, and a shortcut holds for five seconds after the opening stroke completes. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. The same timer continues if the network disconnects.
+`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 650 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A completed opening stays held until a Close command arrives.
 
-Normal Open and Close are idempotent. Force Open/Close intentionally run another full stroke, and should be used only while adjusting the string. Repeated shortcut presses do not extend an active hold. Close cancels it. The controller completes a stroke before reversing so a partially wound string is not followed by a full release stroke.
+Normal Open and Close are idempotent. Force Open/Close intentionally run another full stroke, and should be used only while adjusting the string. The controller completes a stroke before reversing so a partially wound string is not followed by a full release stroke.
 
 Start with the string released. There is no encoder or position sensor, so firmware cannot determine string tension or its initial physical position after power loss. Test a single cycle while watching the mechanism before leaving it connected.
 

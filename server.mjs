@@ -258,12 +258,12 @@ async function handleDoorCommand(res, command, next) {
 
 api.post("/command", checkAuth, (req, res, next) => {
   const command = req.body?.command;
-  if (!["open", "close", "pulse", "force-open", "force-close"].includes(command)) {
+  if (!["open", "close", "force-open", "force-close"].includes(command)) {
     return res.status(400).json({ ok: false, message: "Invalid door command" });
   }
   return handleDoorCommand(res, command, next);
 });
-for (const command of ["open", "close", "pulse", "force-open", "force-close"]) {
+for (const command of ["open", "close", "force-open", "force-close"]) {
   api.post(`/${command}`, checkAuth, (req, res, next) => handleDoorCommand(res, command, next));
 }
 api.post("/emergency-close", checkAuth, (req, res, next) => handleDoorCommand(res, "close", next));

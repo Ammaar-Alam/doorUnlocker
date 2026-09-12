@@ -17,17 +17,18 @@ During protected hours, supply the password in the JSON request body, or use `PO
 | GET | `/status` | Returns `doorOpen`, `online`, and `updatedAt` |
 | GET | `/events` | Streams the same status using server-sent events |
 | POST | `/open` | Opens the handle without a timer |
-| POST | `/close` | Releases the handle and cancels an active hold |
-| POST | `/pulse` | Opens, holds for five seconds, and releases on the Arduino |
+| POST | `/close` | Releases the handle |
 | POST | `/force-open` | Runs another opening stroke while idle |
 | POST | `/force-close` | Runs another closing stroke while idle |
-| POST | `/command` | Accepts `command` with one of the five action names above |
+| POST | `/command` | Accepts `command` with one of the four action names above |
 | POST | `/emergency-close` | Alias for normal Close |
 | POST | `/ring-doorbell` | Sends optional `message` text when notification delivery is configured |
 
-Successful commands return `{"ok":true,"command":"pulse","message":"Command sent"}`. This confirms Arduino Cloud accepted the request; it is not a physical-position acknowledgement. Read `/status` or `/events` for the controller's reported state. When offline, `doorOpen` is `null`, not a stale open or closed value.
+Successful commands return `{"ok":true,"command":"open","message":"Command sent"}`. This confirms Arduino Cloud accepted the request; it is not a physical-position acknowledgement. Read `/status` or `/events` for the controller's reported state. When offline, `doorOpen` is `null`, not a stale open or closed value.
 
-The Arduino ignores expired commands and commands retained from a previous connection. It owns all timing and ignores duplicate normal Open/Close movements. A Close received during the opening stroke completes that calibrated stroke before reversing; a Close during the hold starts releasing immediately. Force commands are ignored while a stroke is already running.
+The Arduino ignores expired commands and commands retained from a previous connection. It times each motor stroke and ignores duplicate normal Open/Close movements. A Close received during the opening stroke completes that calibrated stroke before reversing; a Close after opening starts releasing immediately. Force commands are ignored while a stroke is already running.
+
+Clients own any wait between Open and Close. The `/pulse` endpoint is no longer supported; replace it with separate Open and Close requests. If Close never arrives, the handle remains held.
 
 ## Errors
 
