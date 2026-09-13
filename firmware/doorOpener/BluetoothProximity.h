@@ -3,16 +3,19 @@
 #include <BLEDevice.h>
 #include <esp_gap_ble_api.h>
 #include <freertos/queue.h>
+#include "DoorController.h"
 #include "ProximityController.h"
 
 namespace BluetoothProximity {
 struct Peer {
   esp_bd_addr_t address{};
+  ProximityController arrival;
   bool connected = false;
   bool authenticated = false;
   bool reading = false;
   int rssi = 127;
   uint32_t generation = 0;
+  uint32_t connectedAt = 0;
   uint32_t sampledAt = 0;
 };
 static_assert(PROXIMITY_PHONE_LIMIT <= CONFIG_BT_ACL_CONNECTIONS, "Too many Bluetooth phone slots");
@@ -36,15 +39,25 @@ class Connections : public BLEServerCallbacks {
   void onConnect(BLEServer *, esp_ble_gatts_cb_param_t *event) override {
     bool accepted = false;
     portENTER_CRITICAL(&lock);
+    Peer *slot = nullptr;
+    // Bluedroid resolves bonded private addresses to the same pseudo address
     for (auto &peer : peers) {
-      if (peer.connected) continue;
-      const uint32_t generation = peer.generation + 1;
-      peer = Peer{};
-      peer.generation = generation;
-      peer.connected = true;
-      memcpy(peer.address, event->connect.remote_bda, sizeof(peer.address));
+      if (peer.arrival.remembers(event->connect.remote_bda)) {
+        slot = &peer;
+        break;
+      }
+      if (!peer.connected && (!slot || !peer.arrival.seen)) slot = &peer;
+    }
+    if (slot && !slot->connected) {
+      const uint32_t generation = slot->generation + 1;
+      const auto arrival = slot->arrival;
+      *slot = Peer{};
+      slot->arrival = arrival;
+      slot->generation = generation;
+      slot->connected = true;
+      slot->connectedAt = millis();
+      memcpy(slot->address, event->connect.remote_bda, sizeof(slot->address));
       accepted = true;
-      break;
     }
     advertise = true;
     portEXIT_CRITICAL(&lock);
@@ -55,6 +68,7 @@ class Connections : public BLEServerCallbacks {
     portENTER_CRITICAL(&lock);
     if (Peer *peer = findPeer(event->disconnect.remote_bda)) {
       peer->connected = peer->authenticated = peer->reading = false;
+      peer->arrival.connection(false, millis());
       ++peer->generation;
     }
     advertise = true;
@@ -73,7 +87,10 @@ class Security : public BLESecurityCallbacks {
     const bool authenticated = result.success &&
       (result.auth_mode & ESP_LE_AUTH_REQ_SC_MITM_BOND) == ESP_LE_AUTH_REQ_SC_MITM_BOND;
     portENTER_CRITICAL(&lock);
-    if (Peer *peer = findPeer(result.bd_addr)) peer->authenticated = authenticated;
+    if (Peer *peer = findPeer(result.bd_addr)) {
+      peer->authenticated = authenticated;
+      peer->arrival.authentication(authenticated, peer->address, peer->connectedAt);
+    }
     portEXIT_CRITICAL(&lock);
     if (!authenticated) esp_ble_gap_disconnect(result.bd_addr);
   }
@@ -95,7 +112,6 @@ void onGap(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *data) {
 }
 
 void task(void *) {
-  ProximityGroup group;
   struct Poll {
     uint32_t generation = 0, requestedAt = 0, lastGoodAt = 0;
     bool pending = false;
@@ -111,43 +127,46 @@ void task(void *) {
     advertise = false;
     portEXIT_CRITICAL(&lock);
     const uint32_t now = millis();
-    DoorAction action;
     unsigned connected = 0;
     for (unsigned i = 0; i < PROXIMITY_PHONE_LIMIT; ++i) {
       auto &peer = current[i];
       auto &poll = polls[i];
-      auto &proximity = group.phones[i];
+      auto &proximity = peer.arrival;
       connected += peer.connected;
       if (peer.generation != poll.generation) {
-        proximity.disconnected(action);
         poll = Poll{};
         poll.generation = peer.generation;
         poll.lastGoodAt = now;
       }
       if (!peer.connected || !peer.authenticated) {
-        proximity.disconnected(action);
         poll.pending = false;
         continue;
       }
       if (peer.reading && poll.pending) {
         poll.pending = false;
-        const bool fresh = uint32_t(now - poll.requestedAt) < 1000;
+        const bool fresh = uint32_t(now - poll.requestedAt) < 1000 &&
+          uint32_t(peer.sampledAt - poll.requestedAt) < 1000;
         const int rssi = fresh ? peer.rssi : 127;
         if (rssi >= -127 && rssi <= 20) poll.lastGoodAt = peer.sampledAt;
-        proximity.sample(rssi, action);
+        bool arriving = false;
+        portENTER_CRITICAL(&lock);
+        if (peers[i].generation == peer.generation && peers[i].authenticated) {
+          arriving = peers[i].arrival.sample(rssi, peer.sampledAt);
+        }
+        portEXIT_CRITICAL(&lock);
+        if (arriving) {
+          const DoorAction action = DoorAction::ProximityOpen;
+          xQueueOverwrite(commands, &action);
+        }
       }
       if (poll.pending && uint32_t(now - poll.requestedAt) >= 1000) {
         poll.pending = false;
-        proximity.sample(127, action);
       }
-      if (uint32_t(now - poll.lastGoodAt) >= 3000) proximity.disconnected(action);
       if (!poll.pending && uint32_t(now - poll.requestedAt) >= proximity.interval()) {
         poll.requestedAt = now;
         poll.pending = esp_ble_gap_read_rssi(peer.address) == ESP_OK;
-        if (!poll.pending) proximity.sample(127, action);
       }
     }
-    if (group.update(action)) xQueueOverwrite(commands, &action);
     if (restartAdvertising && connected < PROXIMITY_PHONE_LIMIT) BLEDevice::startAdvertising();
     if (telemetry && (connected != reportedConnections ||
         uint32_t(now - reportedAt) >= (connected ? 500 : 60000))) {
@@ -165,7 +184,7 @@ void task(void *) {
             polls[i].lastGoodAt == peer.sampledAt) snprintf(rssi, sizeof(rssi), "%d", peer.rssi);
         used += snprintf(report.json + used, sizeof(report.json) - used,
           "%s{\"slot\":%u,\"rssi\":%s,\"near\":%s}", first ? "" : ",", i + 1, rssi,
-          group.phones[i].active ? "true" : "false");
+          (strcmp(rssi, "null") != 0 && peer.rssi >= -65) ? "true" : "false");
         first = false;
       }
       snprintf(report.json + used, sizeof(report.json) - used, "]}");

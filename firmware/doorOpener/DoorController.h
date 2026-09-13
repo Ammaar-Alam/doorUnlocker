@@ -12,10 +12,10 @@ constexpr uint32_t OPEN_CRUISE_MS = 600;
 constexpr uint32_t OPEN_SOFT_STOP_MS = 120;
 constexpr int PWM_CLOSE_TARGET = 100;
 constexpr uint32_t CLOSE_RAMP_UP_MS = 100;
-constexpr uint32_t CLOSE_HOLD_MS = 400;
+constexpr uint32_t CLOSE_HOLD_MS = 350;
 constexpr uint32_t CLOSE_RAMP_DOWN_MS = 100;
 
-enum class DoorAction { Open, Close, ForceOpen, ForceClose, ProximityOpen, ProximityClose };
+enum class DoorAction { Open, Close, ForceOpen, ForceClose, ProximityOpen };
 
 struct DoorController {
   bool open = false;
@@ -25,10 +25,15 @@ struct DoorController {
 
   void command(DoorAction action, uint32_t now) {
     const bool force = action == DoorAction::ForceOpen || action == DoorAction::ForceClose;
-    const bool wantOpen = action != DoorAction::Close && action != DoorAction::ForceClose && action != DoorAction::ProximityClose;
+    const bool wantOpen = action != DoorAction::Close && action != DoorAction::ForceClose;
     if (force && moving) return;
-    const bool proximity = action == DoorAction::ProximityOpen || action == DoorAction::ProximityClose;
-    if (proximity && (moving ? requestedOpen : open) == wantOpen) return;
+    if (action == DoorAction::ProximityOpen) {
+      // arrivals share an existing cycle and never override manual movement
+      if (moving || open) return;
+      automaticRelease = true;
+    } else {
+      automaticRelease = false;
+    }
     requestedOpen = wantOpen;
     if (!moving) start(wantOpen, now);
   }
@@ -43,16 +48,24 @@ struct DoorController {
         pwm = 0;
         moving = false;
         open = opening;
+        if (open && automaticRelease) heldAt = now;
         // complete a stroke before reversing to preserve calibrated string travel
         if (requestedOpen != open) start(requestedOpen, now);
       } else {
         pwm = profile(elapsed);
       }
     }
+    if (automaticRelease && !moving && open && uint32_t(now - heldAt) >= 4000) {
+      automaticRelease = false;
+      requestedOpen = false;
+      start(false, now);
+    }
   }
 
 private:
   bool requestedOpen = false;
+  bool automaticRelease = false;
+  uint32_t heldAt = 0;
   uint32_t startedAt = 0;
 
   void start(bool wantOpen, uint32_t now) {
