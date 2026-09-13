@@ -1,0 +1,9 @@
+{
+  "id" : "0c81e4c5-f5d9-4ff1-8c69-d3c02e0f01a5",
+  "targets" : [
+    {
+      "id" : "3b484ac2-46d0-4992-aec2-aefd73fe4c36",
+      "name" : "DoorOpener"
+    }
+  ]
+}

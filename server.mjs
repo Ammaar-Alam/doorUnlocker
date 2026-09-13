@@ -169,6 +169,14 @@ async function arduinoRequest(path, options = {}, retryAuth = true) {
   return response.json();
 }
 
+let latestTelemetry = null;
+let telemetryReceivedAt = null;
+
+api.get("/diagnostics", (req, res) => {
+  if (!authenticated(req)) return res.status(401).json({ ok: false, message: "Please log in to view diagnostics" });
+  res.json({ telemetry: latestTelemetry, receivedAt: telemetryReceivedAt });
+});
+
 let deviceId = null;
 let liveDoorOpen = null;
 let liveUpdatedAt = null;
@@ -377,6 +385,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     liveUpdatedAt = null;
     cachedStatus = null;
   }, telemetry => {
+    latestTelemetry = telemetry;
+    telemetryReceivedAt = Date.now();
     if (!process.stdout.writableNeedDrain) console.log('Bluetooth RSSI:', JSON.stringify(telemetry));
   });
   server.on("listening", () => console.log(`Door server listening on port ${server.address().port}`));

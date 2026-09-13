@@ -13,3 +13,8 @@ arduino_secrets.h
 .idea/
 *.iml
 .vscode/
+
+# Xcode local state
+DerivedData/
+*.xcuserstate
+xcuserdata/

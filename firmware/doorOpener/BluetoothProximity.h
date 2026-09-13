@@ -195,8 +195,9 @@ void begin(QueueHandle_t motorCommands) {
   BLEServer *server = BLEDevice::createServer();
   server->setCallbacks(&connections);
   BLEService *service = server->createService(BLEUUID(uint16_t(0x180A)));
-  service->createCharacteristic(BLEUUID(uint16_t(0x2A24)), BLECharacteristic::PROPERTY_READ)
-    ->setValue("Door Opener");
+  auto *model = service->createCharacteristic(BLEUUID(uint16_t(0x2A24)), BLECharacteristic::PROPERTY_READ);
+  model->setAccessPermissions(ESP_GATT_PERM_READ_ENC_MITM);
+  model->setValue("Door Opener");
   service->start();
   BLEDevice::getAdvertising()->addServiceUUID(service->getUUID());
   BLEDevice::getAdvertising()->setScanResponse(true);
