@@ -31,6 +31,7 @@ let limitsRemaining = 0;
 let retryAfter = "0";
 let attempts = [];
 let timeoutPublish = false;
+let pairingCodeValue = "482619";
 globalThis.fetch = async (url, options = {}) => {
   assert.ok(String(url).startsWith("https://api2.arduino.cc/"), "Only Arduino is replaced by this test");
   if (limitedPath && String(url).endsWith(limitedPath)) {
@@ -53,6 +54,7 @@ globalThis.fetch = async (url, options = {}) => {
     return new Response(null, { status: 204 });
   }
   cloudReads++;
+  if (String(url).endsWith("/test-thing/properties")) return Response.json([{ name: "doorPairingCode", last_value: pairingCodeValue }]);
   if (String(url).endsWith("/test-thing")) return Response.json({ device_id: "test-device" });
   if (String(url).endsWith("/test-device")) return Response.json({ device_status: online ? "ONLINE" : "OFFLINE" });
   if (stallBody) {
@@ -223,6 +225,20 @@ test("door API and shared status", async t => {
   const login = await post("/login", { password: process.env.PASSWORD });
   const { token } = await login.json();
   assert.ok(token);
+  const beforePairingReads = cloudReads;
+  assert.equal((await request("/api/pairing-code")).status, 401, "Pairing code is private during public hours");
+  assert.equal(cloudReads, beforePairingReads, "Unauthenticated PIN requests never reach Arduino");
+  const pairingHeaders = { Authorization: `Bearer ${token}` };
+  const pairing = await request("/api/pairing-code", { headers: pairingHeaders });
+  assert.equal(pairing.status, 200);
+  assert.match(pairing.headers.get("cache-control"), /no-store/);
+  assert.deepEqual(await pairing.json(), { code: pairingCodeValue });
+  for (const invalid of [null, "", "12345", "1234567", "abcdef", 123456]) {
+    pairingCodeValue = invalid;
+    assert.equal((await request("/api/pairing-code", { headers: pairingHeaders })).status, 503);
+  }
+  assert.equal((await request("/api/diagnostics", { headers: pairingHeaders })).status, 200);
+  assert.equal(JSON.stringify(await (await request("/api/diagnostics", { headers: pairingHeaders })).json()).includes("code"), false);
   const adminHeaders = { "X-Admin-Token": process.env.ADMIN_TOKEN };
   response = await post("/admin/set-auth-required", { enabled: "false" }, adminHeaders);
   assert.equal(response.status, 400);

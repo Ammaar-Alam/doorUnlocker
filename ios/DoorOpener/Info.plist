@@ -18,6 +18,18 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAccessorySetupBluetoothNames</key>
+	<array>
+		<string>Ammaar's Door Opener</string>
+	</array>
+	<key>NSAccessorySetupBluetoothServices</key>
+	<array>
+		<string>180A</string>
+	</array>
+	<key>NSAccessorySetupKitSupports</key>
+	<array>
+		<string>Bluetooth</string>
+	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Connect to your door opener and reconnect when you return. Proximity can move the door handle.</string>
 	<key>UIApplicationSceneManifest</key>
