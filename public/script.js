@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let sse = null;
   let fallbackTimer = null;
   let statusRevision = 0;
+  let lastUpdatedAt = null;
+  let commandUnconfirmed = false;
 
   function syncControls() {
     for (const control of [toggle, openButton, closeButton]) {
@@ -31,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = locked ? 'locked' : doorOpen === null ? 'unknown' : doorOpen ? 'open' : 'closed';
     document.body.dataset.doorState = state;
     document.getElementById('login-section').hidden = !locked;
-    document.getElementById('door-state').textContent = locked ? 'Protected' : doorOpen === null ? 'Unavailable' : doorOpen ? 'Open' : 'Closed';
+    document.getElementById('door-state').textContent = locked ? 'Protected' : doorOpen === null ? 'Unavailable' : commandUnconfirmed ? 'Not confirmed' : doorOpen ? 'Open' : 'Closed';
     document.getElementById('state-detail').textContent = locked ? 'Enter a password to continue.' : doorOpen === null ? 'The controller is out of reach.' : doorOpen ? 'The handle is held open.' : 'The handle is released.';
     document.getElementById('connection-status').textContent = locked ? 'Password protected' : doorOpen === null ? 'Disconnected' : 'Connected';
     const label = doorOpen ? 'Close door' : 'Open door';
@@ -52,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function applyDoorState(data) {
+    lastUpdatedAt = data.updatedAt ?? null;
     doorOpen = !locked && data.online && typeof data.doorOpen === 'boolean' ? data.doorOpen : null;
     syncControls();
     document.dispatchEvent(new CustomEvent('door-state', { detail: { open: doorOpen } }));
@@ -60,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function request(path, options = {}) {
     const response = await fetch(path, {
       ...options, headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(15000),
+      signal: options.signal ?? AbortSignal.timeout(15000),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -81,10 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fallbackTimer = null;
   }
 
-  async function getDoorStatus() {
+  async function getDoorStatus(signal) {
     const revision = ++statusRevision;
     try {
-      const data = await request('/status');
+      const data = await request('/status', { signal });
       if (revision === statusRevision) applyDoorState(data);
     } catch {
       if (revision === statusRevision) applyDoorState({});
@@ -130,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('preview-badge').hidden = data.preview !== true;
       locked = data.authRequired && !data.authenticated;
       syncControls();
-      showError('');
+      if (!commandUnconfirmed) showError('');
       if (locked) {
         stopEvents();
         applyDoorState({});
@@ -166,13 +169,26 @@ document.addEventListener('DOMContentLoaded', () => {
   async function sendCommand(command) {
     if (locked || busy || moving || doorOpen === null) return;
     busy = true;
+    commandUnconfirmed = false;
+    const previousUpdate = lastUpdatedAt;
+    const target = command.endsWith('open');
     showError('');
     syncControls();
     document.dispatchEvent(new CustomEvent('door-command', { detail: { command } }));
     try {
       await request('/command', { method: 'POST', body: JSON.stringify({ command }) });
-      await getDoorStatus();
+      const deadline = performance.now() + 12000;
+      while (performance.now() < deadline) {
+        const remaining = Math.max(1, Math.ceil(deadline - performance.now()));
+        await getDoorStatus(AbortSignal.timeout(remaining));
+        if (performance.now() >= deadline) break;
+        if (doorOpen === target && lastUpdatedAt && lastUpdatedAt !== previousUpdate) return;
+        await new Promise(resolve => setTimeout(resolve, Math.min(250, deadline - performance.now())));
+      }
+      commandUnconfirmed = true;
+      showError('Command sent, but completion was not confirmed. Check the handle before retrying.');
     } catch (error) {
+      commandUnconfirmed = true;
       document.dispatchEvent(new CustomEvent('door-command', { detail: { command: null } }));
       showError(error.message);
     } finally {

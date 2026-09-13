@@ -35,6 +35,10 @@ final class DoorClient {
         var request = URLRequest(url: Self.origin.appendingPathComponent("api/" + path))
         request.timeoutInterval = 10
         request.cachePolicy = .reloadIgnoringLocalCacheData
+#if os(iOS)
+        request.httpShouldHandleCookies = false
+        request.allHTTPHeaderFields = await DoorCookies.headers()
+#endif
         if let body {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -42,6 +46,9 @@ final class DoorClient {
         }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw ServiceError(message: "Invalid server response") }
+#if os(iOS)
+        await DoorCookies.receive(http)
+#endif
         guard (200..<300).contains(http.statusCode) else {
             struct Failure: Decodable { var message: String }
             let message = (try? JSONDecoder().decode(Failure.self, from: data).message) ?? "Door service unavailable"

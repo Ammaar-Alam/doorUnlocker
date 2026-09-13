@@ -8,7 +8,7 @@ struct DoorOpenerApp: App {
     var body: some Scene {
         WindowGroup {
             TabView {
-                DoorControlsView(client: client)
+                DoorScreen(client: client)
                 .tabItem { Label("Door", systemImage: "door.left.hand.closed") }
                 NavigationStack {
                     ConnectionView(bluetooth: bluetooth, client: client)
@@ -34,6 +34,7 @@ struct ConnectionView: View {
     @State private var needsLogin = false
     @State private var loadingCode = false
     @State private var visible = false
+    @AppStorage("simpleDoorControls") private var simpleControls = false
 
     var body: some View {
         Form {
@@ -73,6 +74,13 @@ struct ConnectionView: View {
                 if let message { Text(message).foregroundStyle(.secondary) }
             } header: { Text("Pairing code") } footer: {
                 Text("Sign in to see the current code, then connect your door. No USB is needed while the controller is online.")
+            }
+            if #available(iOS 26.0, *) {
+                Section {
+                    Toggle("Simple controls", isOn: $simpleControls)
+                } header: { Text("Display") } footer: {
+                    Text("Use this if the website has trouble loading or responding.")
+                }
             }
             Section {
                 Text("Keep Bluetooth enabled and leave this app in the background for automatic reconnection.")

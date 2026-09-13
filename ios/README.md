@@ -2,7 +2,9 @@
 
 Open `DoorOpener.xcodeproj` in Xcode. Select your signing team and an available bundle identifier in Signing & Capabilities. The app supports iPhone on iOS 18 or later. Archive for an iOS device to distribute through TestFlight; increment the build number for subsequent uploads.
 
-The Door tab uses native controls and the existing HTTP API. The mechanism link opens the full 3D website in Safari. Door and Logs share the native login session, but private diagnostics and pairing-code access do not lock public door controls. Status is reported by the controller, not measured by a position sensor. Commands remain pending until a fresh target-state report arrives or confirmation times out. A repeated stroke in an already-reported state may time out because the boolean report does not change; check the handle before retrying.
+On iOS 26 and later, the Door tab displays the actual website using Apple’s SwiftUI WebView, including its 3D mechanism, typography, controls, and live status. It does not use the former custom UIViewRepresentable wrapper. The website and native tabs share an HTTP-only login cookie through WebKit’s cookie store, with migration of the existing native session. Native controls remain available on iOS 18–25 and through Connection → Display → Simple controls. This provides a fallback for browser or OS problems. Real-device interaction testing is still required after changing the web presentation.
+
+The website and native controls wait for a fresh target-state report before clearing a command, with a bounded confirmation timeout. Status describes the controller, not a position sensor. Repeated same-state strokes may remain unconfirmed because the boolean report does not change. Neither interface automatically resends an uncertain command.
 
 In Connection, sign in and tap Show pairing code before Connect door. The code comes from the online controller through the authenticated server, so USB is not needed for normal pairing. The system accessory picker handles setup. Existing saved accessories migrate into AccessorySetupKit on the first Connect door action. Reconnect restarts the connection while preserving pairing; Forget door asks iOS to remove the managed accessory. If pairing information is lost, forget and set up the door again from this screen. The firmware protects the identity read with authenticated encryption, so the app waits for pairing before showing Connected.
 
@@ -12,7 +14,7 @@ Do not force-quit the app if you want background reconnection. Bluetooth must st
 
 Logs shows up to 200 recent phone connection events in memory and the server's latest Arduino telemetry. Deploy the accompanying server change to enable `/api/diagnostics`. That endpoint requires a valid login at all times, serves one cached MQTT snapshot without extra Arduino requests, and stores no additional history. The app polls every 500 ms only while Logs is visible and active, backing off on errors. The timestamp shows how old a report is. The server's existing journal retention is unchanged. Phone identifiers in Arduino reports are connection slots, not stable phone identities.
 
-The motor release and both animations take 550 ms; opening takes 970 ms. BLE RSSI cannot distinguish which side of a door a phone is on.
+The motor release and both animations take 600 ms; opening takes 970 ms. BLE RSSI cannot distinguish which side of a door a phone is on.
 
 Checks (the native requests are intercepted and do not actuate hardware):
 
