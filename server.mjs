@@ -376,6 +376,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     liveDoorOpen = null;
     liveUpdatedAt = null;
     cachedStatus = null;
+  }, telemetry => {
+    if (!process.stdout.writableNeedDrain) console.log('Bluetooth RSSI:', JSON.stringify(telemetry));
   });
   server.on("listening", () => console.log(`Door server listening on port ${server.address().port}`));
   const shutdown = () => {

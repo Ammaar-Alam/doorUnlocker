@@ -118,4 +118,24 @@ int main() {
   assert(!proximity.disconnected(action));
   assert(!proximity.sample(-45, action));
   assert(proximity.sample(-45, action));
+
+  ProximityGroup group;
+  group.phones[0].sample(-45, action);
+  group.phones[0].sample(-45, action);
+  assert(group.update(action) && action == DoorAction::ProximityOpen);
+  group.phones[1].sample(-40, action);
+  group.phones[1].sample(-40, action);
+  assert(!group.update(action));
+  for (int i = 0; i < 5; ++i) group.phones[0].sample(-70, action);
+  assert(!group.update(action));
+  group.phones[0].disconnected(action);
+  assert(!group.update(action));
+  group.phones[1].disconnected(action);
+  assert(group.update(action) && action == DoorAction::ProximityClose);
+  assert(!group.update(action));
+  group.phones[3].sample(-45, action);
+  group.phones[3].sample(-45, action);
+  assert(group.update(action) && action == DoorAction::ProximityOpen);
+  for (int i = 0; i < 5; ++i) group.phones[3].sample(-65, action);
+  assert(group.update(action) && action == DoorAction::ProximityClose);
 }

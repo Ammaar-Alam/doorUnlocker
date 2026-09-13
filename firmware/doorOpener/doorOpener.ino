@@ -77,6 +77,7 @@ void setup() {
 }
 
 void loop() {
+  BluetoothProximity::readTelemetry(doorTelemetry);
   ArduinoCloud.update();
   doorOpen = reportedOpen.load();
 }

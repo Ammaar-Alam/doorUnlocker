@@ -4,21 +4,48 @@ import jwt from 'jsonwebtoken';
 
 const decoder = new Decoder({ mapsAsObjects: true });
 
-export function decodeDoorState(payload) {
+export function decodeDoorUpdate(payload) {
   if (payload.length > 65536) throw new Error('Arduino update is too large');
   const entries = decoder.decode(payload);
   if (!Array.isArray(entries)) throw new Error('Invalid Arduino update');
+  const update = { doorOpen: null, telemetry: null };
   for (const record of entries) {
     const entry = record instanceof Map ? Object.fromEntries(record) : record;
-    if ((entry?.n ?? entry?.[0]) !== 'doorOpen') continue;
-    const value = entry.vb ?? entry[4];
-    if (typeof value === 'boolean') return value;
+    const name = entry?.n ?? entry?.[0];
+    if (name === 'doorOpen') {
+      const value = entry.vb ?? entry[4];
+      if (typeof value === 'boolean') update.doorOpen = value;
+    } else if (name === 'doorTelemetry') {
+      update.telemetry = decodeTelemetry(entry.vs ?? entry[3]);
+    }
   }
-  return null;
+  return update;
+}
+
+function decodeTelemetry(value) {
+  if (typeof value !== 'string' || value.length > 256) return null;
+  try {
+    const data = JSON.parse(value);
+    if (!Number.isInteger(data?.uptime_ms) || data.uptime_ms < 0 || data.uptime_ms > 0xffffffff ||
+        !Number.isInteger(data.connected) || data.connected < 0 || data.connected > 4 ||
+        !Array.isArray(data.phones) || data.phones.length > data.connected) return null;
+    const slots = new Set();
+    const phones = [];
+    for (const phone of data.phones) {
+      if (!Number.isInteger(phone?.slot) || phone.slot < 1 || phone.slot > 4 || slots.has(phone.slot) ||
+          typeof phone.near !== 'boolean' || (phone.rssi !== null &&
+          (!Number.isInteger(phone.rssi) || phone.rssi < -127 || phone.rssi > 20))) return null;
+      slots.add(phone.slot);
+      phones.push({ slot: phone.slot, rssi: phone.rssi, near: phone.near });
+    }
+    return { uptime_ms: data.uptime_ms, connected: data.connected, phones };
+  } catch {
+    return null;
+  }
 }
 
 // Arduino's user broker publishes SenML CBOR on the Thing output topic
-export function startArduinoStatus(thingId, getToken, onValue, onDisconnect) {
+export function startArduinoStatus(thingId, getToken, onValue, onDisconnect, onTelemetry) {
   let client;
   let retry;
   let refresh;
@@ -42,8 +69,9 @@ export function startArduinoStatus(thingId, getToken, onValue, onDisconnect) {
       connection.on('message', (topic, payload, packet) => {
         if (packet.retain) return;
         try {
-          const value = decodeDoorState(payload);
-          if (value !== null) onValue(value);
+          const update = decodeDoorUpdate(payload);
+          if (update.doorOpen !== null) onValue(update.doorOpen);
+          if (update.telemetry !== null) onTelemetry?.(update.telemetry);
         } catch (error) {
           console.warn('Invalid live door status:', error.message);
         }
