@@ -33,3 +33,19 @@ struct ProximityController {
     return wasActive;
   }
 };
+
+constexpr unsigned PROXIMITY_PHONE_LIMIT = 4;
+
+struct ProximityGroup {
+  ProximityController phones[PROXIMITY_PHONE_LIMIT];
+  bool active = false;
+
+  bool update(DoorAction &action) {
+    bool nearby = false;
+    for (const auto &phone : phones) nearby |= phone.active;
+    if (nearby == active) return false;
+    active = nearby;
+    action = active ? DoorAction::ProximityOpen : DoorAction::ProximityClose;
+    return true;
+  }
+};
