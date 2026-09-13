@@ -1,9 +1,11 @@
 #pragma once
 #include <stdint.h>
+#include <string.h>
 
 constexpr unsigned PROXIMITY_PHONE_LIMIT = 4;
 
 struct ProximityController {
+  uint8_t rememberedAddress[6]{};
   bool connected = false;
   bool seen = false;
   bool armed = false;
@@ -13,6 +15,19 @@ struct ProximityController {
   bool nearPending = false;
 
   uint32_t interval() const { return lastRssi >= -80 ? 100 : 1000; }
+
+  bool remembers(const uint8_t *address) const {
+    return seen && memcmp(rememberedAddress, address, sizeof(rememberedAddress)) == 0;
+  }
+
+  void authentication(bool success, const uint8_t *address, uint32_t connectedAt) {
+    if (!success) return;
+    if (!remembers(address)) {
+      *this = ProximityController{};
+      memcpy(rememberedAddress, address, sizeof(rememberedAddress));
+    }
+    connection(true, connectedAt);
+  }
 
   void connection(bool present, uint32_t now) {
     if (present == connected) return;

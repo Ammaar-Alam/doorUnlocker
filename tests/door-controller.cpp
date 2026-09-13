@@ -82,6 +82,24 @@ int main() {
   door.update(uint32_t(start + 6520));
   assert(!door.open && !door.moving);
 
+  const uint8_t owner[6] = {1, 2, 3, 4, 5, 6};
+  const uint8_t visitor[6] = {6, 5, 4, 3, 2, 1};
+  ProximityController remembered;
+  remembered.authentication(false, visitor, 0);
+  assert(!remembered.seen);
+  remembered.authentication(true, owner, 100);
+  remembered.connection(false, 200);
+  remembered.authentication(false, visitor, 1000);
+  remembered.connection(false, 2000);
+  assert(remembered.remembers(owner) && !remembered.remembers(visitor));
+  assert(remembered.disconnectedAt == 200);
+  remembered.authentication(true, owner, 15200);
+  assert(remembered.armed);
+  remembered.connection(false, 15300);
+  remembered.authentication(true, visitor, 31000);
+  assert(remembered.remembers(visitor) && !remembered.remembers(owner));
+  assert(!remembered.armed);
+
   ProximityController proximity;
   proximity.connection(true, 0);
   assert(!proximity.sample(-40, 100));

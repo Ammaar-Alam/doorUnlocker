@@ -15,6 +15,7 @@ struct Peer {
   bool reading = false;
   int rssi = 127;
   uint32_t generation = 0;
+  uint32_t connectedAt = 0;
   uint32_t sampledAt = 0;
 };
 static_assert(PROXIMITY_PHONE_LIMIT <= CONFIG_BT_ACL_CONNECTIONS, "Too many Bluetooth phone slots");
@@ -41,7 +42,7 @@ class Connections : public BLEServerCallbacks {
     Peer *slot = nullptr;
     // Bluedroid resolves bonded private addresses to the same pseudo address
     for (auto &peer : peers) {
-      if (peer.arrival.seen && memcmp(peer.address, event->connect.remote_bda, sizeof(peer.address)) == 0) {
+      if (peer.arrival.remembers(event->connect.remote_bda)) {
         slot = &peer;
         break;
       }
@@ -50,12 +51,11 @@ class Connections : public BLEServerCallbacks {
     if (slot && !slot->connected) {
       const uint32_t generation = slot->generation + 1;
       const auto arrival = slot->arrival;
-      const bool same = memcmp(slot->address, event->connect.remote_bda, sizeof(slot->address)) == 0;
       *slot = Peer{};
-      if (same) slot->arrival = arrival;
+      slot->arrival = arrival;
       slot->generation = generation;
       slot->connected = true;
-      slot->arrival.connection(true, millis());
+      slot->connectedAt = millis();
       memcpy(slot->address, event->connect.remote_bda, sizeof(slot->address));
       accepted = true;
     }
@@ -87,7 +87,10 @@ class Security : public BLESecurityCallbacks {
     const bool authenticated = result.success &&
       (result.auth_mode & ESP_LE_AUTH_REQ_SC_MITM_BOND) == ESP_LE_AUTH_REQ_SC_MITM_BOND;
     portENTER_CRITICAL(&lock);
-    if (Peer *peer = findPeer(result.bd_addr)) peer->authenticated = authenticated;
+    if (Peer *peer = findPeer(result.bd_addr)) {
+      peer->authenticated = authenticated;
+      peer->arrival.authentication(authenticated, peer->address, peer->connectedAt);
+    }
     portEXIT_CRITICAL(&lock);
     if (!authenticated) esp_ble_gap_disconnect(result.bd_addr);
   }
