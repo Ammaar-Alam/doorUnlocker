@@ -56,7 +56,7 @@ There is no position sensor: status describes the controller’s state, not whet
 
 ## iPhone app
 
-The [iOS app](ios/README.md) provides native door controls, Bluetooth reconnection, and live diagnostics. Open `ios/DoorOpener.xcodeproj` in Xcode. It supports iPhone on iOS 17 or later.
+The [iOS app](ios/README.md) provides native door controls, Bluetooth reconnection, and live diagnostics. Open `ios/DoorOpener.xcodeproj` in Xcode. It supports iPhone on iOS 18 or later.
 
 ## iPhone shortcut
 

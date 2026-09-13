@@ -57,7 +57,7 @@ Uploading a binary does not synchronize the Cloud editor's source files. GitHub 
 
 ## Bluetooth proximity
 
-The board advertises as **Ammaar's Door Opener** and supports up to four simultaneous phone connections. Connect using a BLE app such as nRF Connect. On first pairing, open USB Serial Monitor at 9600 baud and enter the six-digit pairing code shown there into the phone's pairing prompt. Pairing uses authenticated encryption and saved Bluetooth bonds; later connections do not need the laptop. Unpaired or unauthenticated connections cannot operate the motor. Keep the board powered after unplugging USB.
+The board advertises as **Ammaar's Door Opener** and supports up to four simultaneous phone connections. Use the iOS app's Show pairing code and Connect door actions to pair without USB while the controller is online. USB Serial Monitor at 9600 baud remains a fallback for other BLE clients. Pairing uses authenticated encryption and saved Bluetooth bonds; later connections do not need the laptop. Unpaired or unauthenticated connections cannot operate the motor. Keep the board powered after unplugging USB.
 
 Two consecutive RSSI readings at or above **−50 dBm** request Open. Five consecutive readings at or below **−65 dBm** request Close. Sampling runs once per second below −80 dBm, and every 100 ms at or above −80 dBm or while proximity holds the handle open. These thresholds are in `ProximityController.h`.
 
@@ -65,7 +65,9 @@ Each phone has independent counters. Any paired phone nearby keeps the handle op
 
 `doorTelemetry` reports a compact snapshot every 500 ms while phones are connected, on connection-count changes, and once per minute when none are connected. Each paired phone has a slot number, RSSI, and near flag; slot numbers can be reused after disconnecting. A null RSSI indicates no valid current reading. The connected count includes phones still pairing. The existing Arduino Cloud MQTT subscription writes these snapshots to the server log with the prefix `Bluetooth RSSI:`. Network delays can reduce the observed update rate; motor decisions never wait for telemetry delivery.
 
-Create the read-only `doorTelemetry` property before deploying this firmware. Disable its Cloud timeseries persistence if the server journal is the intended history store. Only the latest outgoing snapshot is retained in a fixed 256-byte queue; old snapshots are replaced while the network is busy. The server drops diagnostic output if its log stream is backpressured. Pairing codes and phone addresses are not included in telemetry.
+Create the read-only `doorTelemetry` and `doorPairingCode` String properties with On change updates before deploying this firmware. Disable timeseries persistence for the pairing code; it is a credential, not diagnostic history. The firmware republishes its current PIN on Cloud synchronization, and the authenticated `/pairing-code` endpoint retrieves it on demand.
+
+Disable Cloud timeseries persistence for `doorTelemetry` if the server journal is the intended history store. Only the latest outgoing snapshot is retained in a fixed 256-byte queue; old snapshots are replaced while the network is busy. The server drops diagnostic output if its log stream is backpressured. Pairing codes and phone addresses are not included in telemetry.
 
 There is no fixed five-second hold. RSSI is not a distance or door-position sensor, and can also trigger from inside the room. First pair with motor power disconnected, then test one supervised approach/departure cycle. Check operation with the phone pocketed, locked, and the BLE app in the background; the phone must maintain or re-establish the BLE connection for proximity to work. Initial opening still requires the full motor stroke after the signal threshold is confirmed.
 

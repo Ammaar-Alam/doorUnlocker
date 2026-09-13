@@ -11,6 +11,7 @@ test('Arduino SenML updates preserve booleans and ignore other properties', () =
   assert.equal(decodeDoorState(encode([{ n: 'doorCommand', vs: 'open' }])) , null);
   assert.equal(decodeDoorState(encode([{ n: 'doorOpen', vb: 'false' }])), null);
   assert.throws(() => decodeDoorState(Buffer.alloc(65537)));
+  assert.deepEqual(decodeDoorUpdate(encode([{ n: "doorPairingCode", vs: "482619" }])), { doorOpen: null, telemetry: null }, "PIN updates never enter status or telemetry logs");
 });
 
 test('RSSI telemetry preserves per-phone readings without leaking arbitrary fields', () => {

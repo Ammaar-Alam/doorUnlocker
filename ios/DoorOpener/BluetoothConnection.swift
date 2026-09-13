@@ -1,5 +1,9 @@
 import CoreBluetooth
 import Observation
+#if os(iOS)
+import AccessorySetupKit
+import UIKit
+#endif
 
 enum BluetoothRecovery: Equatable {
     case stopped, waiting, retry, pairAgain
@@ -17,21 +21,117 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
     var enabled = UserDefaults.standard.bool(forKey: "autoConnect")
     var status = "Not connected"
     var pairingRequired = UserDefaults.standard.bool(forKey: "pairingRequired")
-    var candidates: [CBPeripheral] = []
     var entries: [String] = []
     private var central: CBCentralManager!
     private var door: CBPeripheral?
     private var retry: DispatchWorkItem?
     private let service = CBUUID(string: "180A")
+#if os(iOS)
+    private let accessorySession = ASAccessorySession()
+    var setupReady = false
+    var setupBusy = false
+    var managedID: UUID?
+#endif
 
     override init() {
         super.init()
-        if pairingRequired { status = "Pair again in Bluetooth Settings" }
+        if pairingRequired { status = "Forget this door, then connect again" }
+#if os(iOS)
+        accessorySession.activate(on: .main) { [weak self] event in
+            self?.accessoryEvent(event)
+        }
+#else
+        startCentral()
+#endif
+    }
+
+    private func startCentral() {
+        guard central == nil else { resume(); return }
         central = CBCentralManager(delegate: self, queue: .main, options: [
             CBCentralManagerOptionRestoreIdentifierKey: "DoorOpener.connection",
             CBCentralManagerOptionShowPowerAlertKey: false
         ])
     }
+
+#if os(iOS)
+    private func accessoryEvent(_ event: ASAccessoryEvent) {
+        if let error = event.error { status = error.localizedDescription; log(status) }
+        switch event.eventType {
+        case .activated, .accessoryAdded, .accessoryChanged, .migrationComplete:
+            setupReady = true
+            let saved = UserDefaults.standard.string(forKey: "doorID")
+            let accessory = event.accessory ?? accessorySession.accessories.first(where: { $0.bluetoothIdentifier?.uuidString == saved }) ?? accessorySession.accessories.first
+            if let id = accessory?.bluetoothIdentifier {
+                if managedID != id {
+                    door?.delegate = nil
+                    if let door { central?.cancelPeripheralConnection(door) }
+                    door = nil
+                }
+                managedID = id
+                UserDefaults.standard.set(id.uuidString, forKey: "doorID")
+                if event.eventType == .accessoryAdded || event.eventType == .migrationComplete {
+                    enabled = true
+                    UserDefaults.standard.set(true, forKey: "autoConnect")
+                }
+                startCentral()
+            } else { status = "Connect your door to finish setup" }
+        case .accessoryRemoved:
+            if event.accessory?.bluetoothIdentifier == managedID {
+                clearSelection()
+                managedID = nil
+                pairingRequired = false
+                UserDefaults.standard.removeObject(forKey: "pairingRequired")
+                central?.delegate = nil
+                central = nil
+                status = "Door forgotten"
+            }
+        case .invalidated:
+            setupReady = false
+        default: break
+        }
+    }
+
+    func connectDoor() {
+        guard setupReady, !setupBusy else { return }
+        if managedID != nil {
+            setEnabled(false)
+            setEnabled(true)
+            return
+        }
+        let descriptor = ASDiscoveryDescriptor()
+        descriptor.bluetoothServiceUUID = service
+        descriptor.bluetoothNameSubstring = "Ammaar's Door Opener"
+        descriptor.supportedOptions = [.bluetoothPairingLE]
+        let image = UIImage(systemName: "door.left.hand.closed")!
+        let item: ASPickerDisplayItem
+        if let saved = UserDefaults.standard.string(forKey: "doorID"), let id = UUID(uuidString: saved) {
+            let migration = ASMigrationDisplayItem(name: "Door Opener", productImage: image, descriptor: descriptor)
+            migration.peripheralIdentifier = id
+            item = migration
+        } else {
+            item = ASPickerDisplayItem(name: "Door Opener", productImage: image, descriptor: descriptor)
+        }
+        setupBusy = true
+        accessorySession.showPicker(for: [item]) { [weak self] error in
+            DispatchQueue.main.async {
+                self?.setupBusy = false
+                if let error { self?.status = error.localizedDescription; self?.log(error.localizedDescription) }
+            }
+        }
+    }
+
+    func forgetDoor() {
+        guard !setupBusy, let accessory = accessorySession.accessories.first(where: { $0.bluetoothIdentifier == managedID }) else { return }
+        setEnabled(false)
+        setupBusy = true
+        accessorySession.removeAccessory(accessory) { [weak self] error in
+            DispatchQueue.main.async {
+                self?.setupBusy = false
+                if let error { self?.status = error.localizedDescription; self?.log(error.localizedDescription) }
+            }
+        }
+    }
+#endif
 
     func log(_ message: String) {
         entries.insert("\(Date().formatted(date: .omitted, time: .standard))  \(message)", at: 0)
@@ -44,34 +144,32 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
         retry?.cancel()
         if value { resume() }
         else {
-            central.stopScan()
-            if let door { central.cancelPeripheralConnection(door) }
+            central?.stopScan()
+            if let door { central?.cancelPeripheralConnection(door) }
             status = "Auto-connect off"
             log(status)
         }
     }
 
-    func forgetDoor() {
+    private func clearSelection() {
         setEnabled(false)
         door?.delegate = nil
         door = nil
         UserDefaults.standard.removeObject(forKey: "doorID")
-        candidates.removeAll()
         status = "No door selected"
         log("Saved door forgotten")
     }
 
     func select(_ peripheral: CBPeripheral) {
-        central.stopScan()
+        central?.stopScan()
         if let door, door.identifier != peripheral.identifier { central.cancelPeripheralConnection(door) }
-        candidates.removeAll()
         door = peripheral
         UserDefaults.standard.set(peripheral.identifier.uuidString, forKey: "doorID")
         setEnabled(true)
     }
 
     func resume() {
-        guard enabled, central.state == .poweredOn else { return }
+        guard enabled, let central, central.state == .poweredOn else { return }
         if door == nil, let saved = UserDefaults.standard.string(forKey: "doorID"), let id = UUID(uuidString: saved) {
             door = central.retrievePeripherals(withIdentifiers: [id]).first
         }
@@ -114,7 +212,7 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         let name = advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? peripheral.name
         guard name == "Ammaar's Door Opener" else { return }
-        if !candidates.contains(where: { $0.identifier == peripheral.identifier }) { candidates.append(peripheral) }
+        if peripheral.identifier.uuidString == UserDefaults.standard.string(forKey: "doorID") { select(peripheral) }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
@@ -183,7 +281,7 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
             setEnabled(false)
             pairingRequired = true
             UserDefaults.standard.set(true, forKey: "pairingRequired")
-            status = "Pair again in Bluetooth Settings"
+            status = "Forget this door, then connect again"
             log(status)
         case .retry:
             status = "Waiting for your door"
@@ -192,7 +290,7 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
         case .waiting:
             status = "Waiting for your door"
         case .stopped:
-            status = pairingRequired ? "Pair again in Bluetooth Settings" : "Auto-connect off"
+            status = pairingRequired ? "Forget this door, then connect again" : "Auto-connect off"
         }
     }
 

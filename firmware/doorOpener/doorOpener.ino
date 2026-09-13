@@ -21,6 +21,7 @@ String lastCommand;
 void onCloudSync() {
   lastCommand = doorCommand;
   doorOpen = reportedOpen.load();
+  doorPairingCode = String(BluetoothProximity::passkey);
   cloudSynced = true;
 }
 

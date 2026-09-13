@@ -8,6 +8,7 @@ void onDoorCommandChange();
 bool doorOpen;
 String doorCommand;
 String doorTelemetry;
+String doorPairingCode;
 
 void initProperties() {
   ArduinoCloud.setBoardId(DEVICE_LOGIN_NAME);
@@ -15,6 +16,7 @@ void initProperties() {
   ArduinoCloud.addProperty(doorOpen, READ, ON_CHANGE, NULL);
   ArduinoCloud.addProperty(doorCommand, READWRITE, ON_CHANGE, onDoorCommandChange);
   ArduinoCloud.addProperty(doorTelemetry, READ, ON_CHANGE, NULL);
+  ArduinoCloud.addProperty(doorPairingCode, READ, ON_CHANGE, NULL);
 }
 
 WiFiConnectionHandler ArduinoIoTPreferredConnection(SECRET_SSID, SECRET_OPTIONAL_PASS);

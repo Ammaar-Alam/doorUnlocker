@@ -265,6 +265,20 @@ api.get("/status", checkAuth, async (req, res, next) => {
   }
 });
 
+api.get("/pairing-code", async (req, res, next) => {
+  if (!authenticated(req)) return res.status(401).json({ ok: false, message: "Please sign in to view the pairing code" });
+  try {
+    const status = await fetchDoorStatus();
+    if (!status.online) return res.status(503).json({ ok: false, message: "Door controller is offline" });
+    const properties = await arduinoRequest(`things/${thingId}/properties`);
+    const code = properties.find(property => property.name === "doorPairingCode")?.last_value;
+    if (typeof code !== "string" || !/^\d{6}$/.test(code)) {
+      return res.status(503).json({ ok: false, message: "Pairing code unavailable. Wait for the controller firmware update." });
+    }
+    res.json({ code });
+  } catch (error) { next(error); }
+});
+
 let commandInFlight = false;
 async function handleDoorCommand(res, command, next) {
   if (commandInFlight) return res.status(409).json({ ok: false, message: "A door command is already being sent" });

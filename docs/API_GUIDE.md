@@ -16,6 +16,8 @@ During protected hours, supply the password in the JSON request body, or use `PO
 | POST | `/login` | Checks `password`, sets a cookie, and returns `token` |
 | GET | `/status` | Returns `doorOpen`, `online`, and `updatedAt` |
 | GET | `/events` | Streams the same status using server-sent events |
+| GET | `/diagnostics` | Returns the latest RSSI snapshot; login always required |
+| GET | `/pairing-code` | Returns the online controller’s current six-digit PIN; login always required |
 | POST | `/open` | Opens the handle without a timer |
 | POST | `/close` | Releases the handle |
 | POST | `/force-open` | Runs another opening stroke while idle |
@@ -29,6 +31,8 @@ Successful commands return `{"ok":true,"command":"open","message":"Command sent"
 The Arduino ignores expired commands and commands retained from a previous connection. Each Open or Close received while idle runs a full stroke, even when the controller already reports that position. A Close received during the opening stroke completes that calibrated stroke before reversing; a Close after opening starts releasing immediately. Force commands are ignored while a stroke is already running.
 
 Clients own any wait between Open and Close. The `/pulse` endpoint is no longer supported; replace it with separate Open and Close requests. If Close never arrives, the handle remains held.
+
+The pairing-code endpoint returns a `code` string. It requires a valid login cookie or Bearer token even during public hours. The controller must publish the read-only `doorPairingCode` Cloud property. PINs are not included in status, SSE, or RSSI logs.
 
 ## Errors
 

@@ -11,7 +11,7 @@ struct DoorOpenerApp: App {
                 DoorControlsView(client: client)
                 .tabItem { Label("Door", systemImage: "door.left.hand.closed") }
                 NavigationStack {
-                    ConnectionView(bluetooth: bluetooth)
+                    ConnectionView(bluetooth: bluetooth, client: client)
                 }
                 .tabItem { Label("Connection", systemImage: "antenna.radiowaves.left.and.right") }
                 NavigationStack {
@@ -27,40 +27,81 @@ struct DoorOpenerApp: App {
 
 struct ConnectionView: View {
     @Bindable var bluetooth: BluetoothConnection
+    let client: DoorClient
+    @Environment(\.scenePhase) private var phase
+    @State private var code: String?
+    @State private var message: String?
+    @State private var needsLogin = false
+    @State private var loadingCode = false
+    @State private var visible = false
 
     var body: some View {
         Form {
             Section {
                 LabeledContent("Door", value: bluetooth.status)
+                if bluetooth.pairingRequired && bluetooth.managedID != nil {
+                    Button("Forget door", role: .destructive, action: bluetooth.forgetDoor)
+                        .disabled(bluetooth.setupBusy)
+                } else {
+                    Button(bluetooth.managedID == nil ? "Connect door" : "Reconnect", action: bluetooth.connectDoor)
+                        .disabled(!bluetooth.setupReady || bluetooth.setupBusy)
+                }
                 Toggle("Auto-connect", isOn: Binding(get: { bluetooth.enabled }, set: bluetooth.setEnabled))
-                Button("Forget door", role: .destructive, action: bluetooth.forgetDoor)
+                    .disabled(bluetooth.managedID == nil || bluetooth.setupBusy)
+                if bluetooth.managedID != nil && !bluetooth.pairingRequired {
+                    Button("Forget door", role: .destructive, action: bluetooth.forgetDoor)
+                        .disabled(bluetooth.setupBusy)
+                }
             } footer: {
-                Text("Once paired, iOS reconnects when your door is in range. The door controls proximity opening. Connecting nearby may move the handle.")
+                Text("Reconnect keeps your pairing. Forget door asks iOS to remove the accessory. Connecting nearby may move the handle.")
             }
             if bluetooth.pairingRequired {
-                Section("Pair again") {
-                    Text("In iPhone Settings → Bluetooth, forget Ammaar’s Door Opener. Then return here, choose Forget door, enable Auto-connect, and pair again with the code from USB Serial.")
-                    Link("Open Settings", destination: URL(string: UIApplication.openSettingsURLString)!)
+                Section("Repair pairing") {
+                    Text(bluetooth.managedID == nil
+                         ? "Tap Connect door to let iOS manage the existing accessory. You can then forget it here and pair again."
+                         : "Choose Forget door, then Connect door. Use the pairing code below when iOS asks.")
                 }
             }
-            if !bluetooth.candidates.isEmpty {
-                Section("Nearby doors") {
-                    ForEach(bluetooth.candidates, id: \.identifier) { door in
-                        Button { bluetooth.select(door) } label: {
-                            VStack(alignment: .leading) {
-                                Text(door.name ?? "Door Opener")
-                                Text(door.identifier.uuidString.suffix(8)).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                    }
+            Section {
+                if needsLogin { DoorSignInView(client: client) { Task { await loadCode() } } }
+                if let code {
+                    Text(code).font(.largeTitle.monospacedDigit()).textSelection(.enabled).privacySensitive()
                 }
+                Button(code == nil ? "Show pairing code" : "Refresh code") {
+                    Task { await loadCode() }
+                }.disabled(loadingCode)
+                if let message { Text(message).foregroundStyle(.secondary) }
+            } header: { Text("Pairing code") } footer: {
+                Text("Sign in to see the current code, then connect your door. No USB is needed while the controller is online.")
             }
-            Section("First connection") {
-                Text("Enable Auto-connect, then choose your door. Enter the pairing code shown in the Arduino USB Serial Monitor at 9600 baud.")
-                Text("Keep Bluetooth enabled and leave this app in the background. Reopen it after force-quitting. RSSI is signal strength, not an exact distance.")
+            Section {
+                Text("Keep Bluetooth enabled and leave this app in the background for automatic reconnection.")
                     .foregroundStyle(.secondary)
             }
         }
         .navigationTitle("Connection")
+        .onAppear { visible = true }
+        .onDisappear { visible = false; code = nil }
+        .onChange(of: phase) { _, phase in if phase != .active { code = nil } }
     }
+
+    private func loadCode() async {
+        guard !loadingCode else { return }
+        loadingCode = true
+        code = nil
+        message = nil
+        defer { loadingCode = false }
+        do {
+            struct PairingCode: Decodable { let code: String }
+            let data = try await client.data("pairing-code")
+            let value = try JSONDecoder().decode(PairingCode.self, from: data).code
+            guard phase == .active, visible else { return }
+            code = value
+            needsLogin = false
+        } catch {
+            needsLogin = (error as? DoorClient.ServiceError)?.statusCode == 401
+            message = error.localizedDescription
+        }
+    }
+
 }
