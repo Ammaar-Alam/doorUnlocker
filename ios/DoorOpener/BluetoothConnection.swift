@@ -1,10 +1,22 @@
 import CoreBluetooth
 import Observation
 
+enum BluetoothRecovery: Equatable {
+    case stopped, waiting, retry, pairAgain
+
+    static func action(error: Error?, enabled: Bool, isReconnecting: Bool) -> Self {
+        guard enabled else { return .stopped }
+        if let error = error as NSError?, error.domain == CBErrorDomain,
+           error.code == CBError.peerRemovedPairingInformation.rawValue { return .pairAgain }
+        return isReconnecting ? .waiting : .retry
+    }
+}
+
 @Observable
 final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     var enabled = UserDefaults.standard.bool(forKey: "autoConnect")
     var status = "Not connected"
+    var pairingRequired = UserDefaults.standard.bool(forKey: "pairingRequired")
     var candidates: [CBPeripheral] = []
     var entries: [String] = []
     private var central: CBCentralManager!
@@ -14,6 +26,7 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
 
     override init() {
         super.init()
+        if pairingRequired { status = "Pair again in Bluetooth Settings" }
         central = CBCentralManager(delegate: self, queue: .main, options: [
             CBCentralManagerOptionRestoreIdentifierKey: "DoorOpener.connection",
             CBCentralManagerOptionShowPowerAlertKey: false
@@ -118,7 +131,8 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard enabled, peripheral.identifier == door?.identifier else { return }
-        guard error == nil, let service = peripheral.services?.first(where: { $0.uuid == self.service }) else {
+        if let error { recover(peripheral, error: error); return }
+        guard let service = peripheral.services?.first(where: { $0.uuid == self.service }) else {
             status = "Could not read door service"; log(status); return
         }
         peripheral.discoverCharacteristics([CBUUID(string: "2A24")], for: service)
@@ -126,7 +140,8 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         guard enabled, peripheral.identifier == door?.identifier else { return }
-        guard error == nil, let model = service.characteristics?.first(where: { $0.uuid == CBUUID(string: "2A24") }) else {
+        if let error { recover(peripheral, error: error); return }
+        guard let model = service.characteristics?.first(where: { $0.uuid == CBUUID(string: "2A24") }) else {
             status = "Could not read door identity"; log(status); return
         }
         peripheral.readValue(for: model)
@@ -134,28 +149,51 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard enabled, peripheral.identifier == door?.identifier else { return }
-        guard error == nil, characteristic.value == Data("Door Opener".utf8) else {
-            status = "Pairing or identity check failed"
-            log(status)
-            setEnabled(false)
+        if let error {
+            recover(peripheral, error: error)
             return
         }
+        guard characteristic.value == Data("Door Opener".utf8) else {
+            setEnabled(false)
+            status = "Door identity check failed"
+            log(status)
+            return
+        }
+        pairingRequired = false
+        UserDefaults.standard.removeObject(forKey: "pairingRequired")
         status = "Connected"
         log("Door identity verified")
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, timestamp: CFAbsoluteTime, isReconnecting: Bool, error: Error?) {
         guard peripheral.identifier == door?.identifier else { return }
-        status = enabled ? "Waiting for your door" : "Auto-connect off"
         log("Disconnected\(isReconnecting ? " · iOS is reconnecting" : "")")
-        if enabled && !isReconnecting { scheduleRetry() }
+        recover(peripheral, error: error, isReconnecting: isReconnecting)
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         guard peripheral.identifier == door?.identifier else { return }
-        status = "Connection interrupted"
-        log(error?.localizedDescription ?? status)
-        if enabled { scheduleRetry() }
+        recover(peripheral, error: error)
+    }
+
+    private func recover(_ peripheral: CBPeripheral, error: Error?, isReconnecting: Bool = false) {
+        if let error { log(error.localizedDescription) }
+        switch BluetoothRecovery.action(error: error, enabled: enabled, isReconnecting: isReconnecting) {
+        case .pairAgain:
+            setEnabled(false)
+            pairingRequired = true
+            UserDefaults.standard.set(true, forKey: "pairingRequired")
+            status = "Pair again in Bluetooth Settings"
+            log(status)
+        case .retry:
+            status = "Waiting for your door"
+            if peripheral.state == .connected { central.cancelPeripheralConnection(peripheral) }
+            else { scheduleRetry() }
+        case .waiting:
+            status = "Waiting for your door"
+        case .stopped:
+            status = pairingRequired ? "Pair again in Bluetooth Settings" : "Auto-connect off"
+        }
     }
 
     private func scheduleRetry() {

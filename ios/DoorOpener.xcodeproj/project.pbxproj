@@ -7,8 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0000000000000000000000CE = {isa = PBXBuildFile; fileRef = 00000000000000000000006B; };
 		0000000000000000000000C8 /* BluetoothConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000064 /* BluetoothConnection.swift */; };
-		0000000000000000000000C9 /* DoorWebsite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000065 /* DoorWebsite.swift */; };
+		0000000000000000000000C9 /* DoorClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000065 /* DoorClient.swift */; };
 		0000000000000000000000CA /* DoorOpenerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000066 /* DoorOpenerApp.swift */; };
 		0000000000000000000000CB /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000067 /* DiagnosticsView.swift */; };
 		0000000000000000000000CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000068 /* Assets.xcassets */; };
@@ -16,9 +17,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		00000000000000000000006B = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoorControlsView.swift; sourceTree = "<group>"; };
 		000000000000000000000006 /* DoorOpener.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = DoorOpener.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000064 /* BluetoothConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothConnection.swift; sourceTree = "<group>"; };
-		000000000000000000000065 /* DoorWebsite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoorWebsite.swift; sourceTree = "<group>"; };
+		000000000000000000000065 /* DoorClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoorClient.swift; sourceTree = "<group>"; };
 		000000000000000000000066 /* DoorOpenerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoorOpenerApp.swift; sourceTree = "<group>"; };
 		000000000000000000000067 /* DiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
 		000000000000000000000068 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -49,7 +51,8 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000064 /* BluetoothConnection.swift */,
-				000000000000000000000065 /* DoorWebsite.swift */,
+				000000000000000000000065 /* DoorClient.swift */,
+				00000000000000000000006B /* DoorControlsView.swift */,
 				000000000000000000000066 /* DoorOpenerApp.swift */,
 				000000000000000000000067 /* DiagnosticsView.swift */,
 				000000000000000000000068 /* Assets.xcassets */,
@@ -131,7 +134,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				0000000000000000000000C8 /* BluetoothConnection.swift in Sources */,
-				0000000000000000000000C9 /* DoorWebsite.swift in Sources */,
+				0000000000000000000000C9 /* DoorClient.swift in Sources */,
+				0000000000000000000000CE /* DoorControlsView.swift in Sources */,
 				0000000000000000000000CA /* DoorOpenerApp.swift in Sources */,
 				0000000000000000000000CB /* DiagnosticsView.swift in Sources */,
 			);

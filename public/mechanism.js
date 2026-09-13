@@ -513,7 +513,7 @@ async function createMechanism() {
     if (!frame && !document.hidden) frame = requestAnimationFrame(render);
   }
   function animate(open, start = performance.now()) {
-    motion = { from: position, to: open ? 1 : 0, opening: open, start, duration: open ? 970 : 500 };
+    motion = { from: position, to: open ? 1 : 0, opening: open, start, duration: open ? 970 : 550 };
     if (performance.now() - start >= motion.duration) motion = null;
     else if (reducedMotion.matches || document.hidden) { pose(motion.to); motion = null; }
     requestRender();

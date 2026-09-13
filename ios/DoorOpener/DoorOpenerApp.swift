@@ -3,28 +3,19 @@ import SwiftUI
 @main
 struct DoorOpenerApp: App {
     @State private var bluetooth = BluetoothConnection()
-    @State private var website = DoorWebsite()
+    @State private var client = DoorClient()
 
     var body: some Scene {
         WindowGroup {
             TabView {
-                ZStack {
-                    DoorWebsiteView(website: website)
-                    if let error = website.error {
-                        ContentUnavailableView {
-                            Label("Website unavailable", systemImage: "wifi.slash")
-                        } description: { Text(error) } actions: { Button("Retry", action: website.reload) }
-                        .background(Color(.systemBackground))
-                    }
-                }
-                .onAppear { if website.webView.url == nil { website.reload() } }
+                DoorControlsView(client: client)
                 .tabItem { Label("Door", systemImage: "door.left.hand.closed") }
                 NavigationStack {
                     ConnectionView(bluetooth: bluetooth)
                 }
                 .tabItem { Label("Connection", systemImage: "antenna.radiowaves.left.and.right") }
                 NavigationStack {
-                    DiagnosticsView(bluetooth: bluetooth, website: website)
+                    DiagnosticsView(bluetooth: bluetooth, client: client)
                 }
                 .tabItem { Label("Logs", systemImage: "waveform.path") }
             }
@@ -45,6 +36,12 @@ struct ConnectionView: View {
                 Button("Forget door", role: .destructive, action: bluetooth.forgetDoor)
             } footer: {
                 Text("Once paired, iOS reconnects when your door is in range. The door controls proximity opening. Connecting nearby may move the handle.")
+            }
+            if bluetooth.pairingRequired {
+                Section("Pair again") {
+                    Text("In iPhone Settings → Bluetooth, forget Ammaar’s Door Opener. Then return here, choose Forget door, enable Auto-connect, and pair again with the code from USB Serial.")
+                    Link("Open Settings", destination: URL(string: UIApplication.openSettingsURLString)!)
+                }
             }
             if !bluetooth.candidates.isEmpty {
                 Section("Nearby doors") {
