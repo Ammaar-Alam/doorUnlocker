@@ -14,7 +14,7 @@ Do not force-quit the app if you want background reconnection. Bluetooth must st
 
 Logs shows up to 200 recent phone connection events in memory and the server's latest Arduino telemetry. Deploy the accompanying server change to enable `/api/diagnostics`. That endpoint requires a valid login at all times, serves one cached MQTT snapshot without extra Arduino requests, and stores no additional history. The app polls every 500 ms only while Logs is visible and active, backing off on errors. The timestamp shows how old a report is. The server's existing journal retention is unchanged. Phone identifiers in Arduino reports are connection slots, not stable phone identities.
 
-The motor release and both animations take 600 ms; opening takes 970 ms. BLE RSSI cannot distinguish which side of a door a phone is on.
+The motor release and both animations take 550 ms; opening takes 970 ms. BLE RSSI cannot distinguish which side of a door a phone is on.
 
 Checks (the native requests are intercepted and do not actuate hardware):
 
