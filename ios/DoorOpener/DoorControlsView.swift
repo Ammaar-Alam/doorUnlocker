@@ -35,7 +35,7 @@ struct DoorControlsView: View {
                 .frame(maxWidth: .infinity).frame(height: 260)
                 .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(client.sending.map { $0 ? "Opening…" : "Closing…" } ?? reportedState)
+                    Text(client.sending.map { $0 ? "Opening…" : "Closing…" } ?? (client.commandUnconfirmed ? "Not confirmed" : reportedState))
                         .font(.largeTitle.weight(.semibold))
                     Text("Reported state · no position sensor").font(.caption).foregroundStyle(.secondary)
                 }
@@ -73,6 +73,7 @@ struct DoorControlsView: View {
 
 struct DoorSignInView: View {
     let client: DoorClient
+    var onSignIn: (() -> Void)? = nil
     @State private var password = ""
     @State private var busy = false
     @State private var error: String?
@@ -85,7 +86,7 @@ struct DoorSignInView: View {
                 error = nil
                 Task {
                     defer { busy = false; password = "" }
-                    do { try await client.login(password: password) }
+                    do { try await client.login(password: password); onSignIn?() }
                     catch { self.error = error.localizedDescription }
                 }
             }.disabled(password.isEmpty || busy)

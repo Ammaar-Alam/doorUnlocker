@@ -4,21 +4,30 @@ import Observation
 struct DoorStatus: Decodable {
     var doorOpen: Bool?
     var online: Bool
+    var updatedAt: String?
 }
 
 @MainActor @Observable
 final class DoorClient {
     static let origin = URL(string: "https://door.ammaaralam.com")!
     var status: DoorStatus?
-    var error: String?
+    private var statusError: String?
+    private var commandError: String?
+    var error: String? { commandError ?? statusError }
+    var commandUnconfirmed: Bool { commandError != nil }
     var sending: Bool?
     var needsLogin = false
     private let session: URLSession
+    private let confirmationTimeout: Duration
 
-    init(session: URLSession = .shared) { self.session = session }
+    init(session: URLSession = .shared, confirmationTimeout: Duration = .seconds(12)) {
+        self.session = session
+        self.confirmationTimeout = confirmationTimeout
+    }
 
     struct ServiceError: LocalizedError {
         let message: String
+        var statusCode = 0
         var errorDescription: String? { message }
     }
 
@@ -33,11 +42,10 @@ final class DoorClient {
         }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw ServiceError(message: "Invalid server response") }
-        if http.statusCode == 401 { needsLogin = true }
         guard (200..<300).contains(http.statusCode) else {
             struct Failure: Decodable { var message: String }
             let message = (try? JSONDecoder().decode(Failure.self, from: data).message) ?? "Door service unavailable"
-            throw ServiceError(message: message)
+            throw ServiceError(message: message, statusCode: http.statusCode)
         }
         return data
     }
@@ -47,30 +55,41 @@ final class DoorClient {
             let value = try JSONDecoder().decode(DoorStatus.self, from: await data("status"))
             guard !Task.isCancelled else { return }
             status = value
+            statusError = nil
+            needsLogin = false
         } catch {
             guard !Task.isCancelled else { return }
             status = nil
-            self.error = error.localizedDescription
+            statusError = error.localizedDescription
+            if (error as? ServiceError)?.statusCode == 401 { needsLogin = true }
         }
     }
 
     func send(open: Bool) async {
         guard sending == nil, !needsLogin, status?.online == true else { return }
+        let previousUpdate = status?.updatedAt
         sending = open
-        error = nil
+        commandError = nil
         defer { sending = nil }
         do {
             _ = try await data("command", body: ["command": open ? "open" : "close"])
-            try await Task.sleep(for: .milliseconds(open ? 970 : 550))
+            let clock = ContinuousClock()
+            let deadline = clock.now.advanced(by: confirmationTimeout)
+            repeat {
+                await refresh()
+                if status?.doorOpen == open, let updated = status?.updatedAt, updated != previousUpdate { return }
+                try await Task.sleep(for: .milliseconds(250))
+            } while clock.now < deadline
+            commandError = "Command sent, but completion was not confirmed. Check the handle before retrying."
         } catch {
-            self.error = "Command not confirmed. Check the handle before retrying. \(error.localizedDescription)"
+            if (error as? ServiceError)?.statusCode == 401 { needsLogin = true }
+            commandError = "Command not confirmed. Check the handle before retrying. \(error.localizedDescription)"
         }
-        await refresh()
     }
 
     func login(password: String) async throws {
         _ = try await data("login", body: ["password": password])
         needsLogin = false
-        error = nil
+        statusError = nil
     }
 }

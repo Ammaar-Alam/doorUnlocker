@@ -22,11 +22,12 @@ struct DiagnosticsView: View {
     @State private var snapshot: DiagnosticsSnapshot?
     @State private var message: String?
     @State private var visible = false
+    @State private var needsLogin = false
 
     var body: some View {
         List {
             Section {
-                if client.needsLogin { DoorSignInView(client: client) }
+                if needsLogin { DoorSignInView(client: client) { Task { await refresh() } } }
                 if let message { Text(message).foregroundStyle(.secondary) }
                 if let telemetry = snapshot?.telemetry {
                     LabeledContent("Connected phones", value: "\(telemetry.connected)")
@@ -54,7 +55,7 @@ struct DiagnosticsView: View {
             guard visible && phase == .active else { return }
             while !Task.isCancelled {
                 await refresh()
-                do { try await Task.sleep(for: .milliseconds(client.needsLogin || message != nil ? 5000 : 500)) }
+                do { try await Task.sleep(for: .milliseconds(needsLogin || message != nil ? 5000 : 500)) }
                 catch { return }
             }
         }
@@ -66,10 +67,12 @@ struct DiagnosticsView: View {
             guard !Task.isCancelled else { return }
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .millisecondsSince1970
+            needsLogin = false
             snapshot = try decoder.decode(DiagnosticsSnapshot.self, from: data)
             message = snapshot?.telemetry == nil ? "Waiting for an Arduino report." : nil
         } catch {
             if !Task.isCancelled {
+                if (error as? DoorClient.ServiceError)?.statusCode == 401 { needsLogin = true }
                 snapshot = nil
                 message = error.localizedDescription
             }
