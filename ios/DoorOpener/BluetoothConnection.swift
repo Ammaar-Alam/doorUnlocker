@@ -38,6 +38,16 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
         }
     }
 
+    func forgetDoor() {
+        setEnabled(false)
+        door?.delegate = nil
+        door = nil
+        UserDefaults.standard.removeObject(forKey: "doorID")
+        candidates.removeAll()
+        status = "No door selected"
+        log("Saved door forgotten")
+    }
+
     func select(_ peripheral: CBPeripheral) {
         central.stopScan()
         if let door, door.identifier != peripheral.identifier { central.cancelPeripheralConnection(door) }
@@ -95,7 +105,7 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        guard enabled else { central.cancelPeripheralConnection(peripheral); return }
+        guard enabled, peripheral.identifier == door?.identifier else { central.cancelPeripheralConnection(peripheral); return }
         log("Connected to door")
         prepare(peripheral)
     }
@@ -107,6 +117,7 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        guard enabled, peripheral.identifier == door?.identifier else { return }
         guard error == nil, let service = peripheral.services?.first(where: { $0.uuid == self.service }) else {
             status = "Could not read door service"; log(status); return
         }
@@ -114,6 +125,7 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+        guard enabled, peripheral.identifier == door?.identifier else { return }
         guard error == nil, let model = service.characteristics?.first(where: { $0.uuid == CBUUID(string: "2A24") }) else {
             status = "Could not read door identity"; log(status); return
         }
@@ -121,6 +133,7 @@ final class BluetoothConnection: NSObject, CBCentralManagerDelegate, CBPeriphera
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        guard enabled, peripheral.identifier == door?.identifier else { return }
         guard error == nil, characteristic.value == Data("Door Opener".utf8) else {
             status = "Pairing or identity check failed"
             log(status)

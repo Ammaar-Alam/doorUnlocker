@@ -42,6 +42,7 @@ struct ConnectionView: View {
             Section {
                 LabeledContent("Door", value: bluetooth.status)
                 Toggle("Auto-connect", isOn: Binding(get: { bluetooth.enabled }, set: bluetooth.setEnabled))
+                Button("Forget door", role: .destructive, action: bluetooth.forgetDoor)
             } footer: {
                 Text("Once paired, iOS reconnects when your door is in range. The door controls proximity opening. Connecting nearby may move the handle.")
             }
