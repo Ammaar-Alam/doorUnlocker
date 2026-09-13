@@ -73,7 +73,7 @@ There is no fixed five-second hold. RSSI is not a distance or door-position sens
 
 ## Timing and string adjustment
 
-`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 550 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A completed opening stays held until a Close command arrives.
+`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 600 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A completed opening stays held until a Close command arrives.
 
 Each Open or Close received while idle runs a full stroke, regardless of the reported position. The controller completes a stroke before reversing so a partially wound string is not followed by a full release stroke. Force Open/Close also run a full stroke while idle and are ignored during movement.
 

@@ -26,39 +26,39 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 5970);
   assert(door.moving && !door.opening);
-  for (uint32_t t = 5970; t < 6520; ++t) {
+  for (uint32_t t = 5970; t < 6570; ++t) {
     door.update(t);
     assert(door.moving && !door.opening);
     assert(door.pwm >= 0 && door.pwm <= PWM_CLOSE_TARGET);
   }
-  door.update(6520);
+  door.update(6570);
   assert(!door.open && !door.moving && door.pwm == 0);
-  door.command(DoorAction::Close, 6550);
+  door.command(DoorAction::Close, 6600);
   assert(door.moving && !door.opening);
-  door.update(7099);
+  door.update(7199);
   assert(door.moving);
-  door.update(7100);
+  door.update(7200);
   assert(!door.moving);
 
-  door.command(DoorAction::Open, 7200);
-  door.update(8170);
-  door.command(DoorAction::Close, 8200);
+  door.command(DoorAction::Open, 7300);
+  door.update(8270);
+  door.command(DoorAction::Close, 8300);
   assert(door.moving && !door.opening);
-  door.update(8750);
+  door.update(8900);
   door.update(14000);
   assert(!door.open && !door.moving);
   door.command(DoorAction::ForceClose, 15000);
   assert(door.moving && !door.opening);
-  door.update(15550);
+  door.update(15600);
   door.command(DoorAction::ForceClose, 15651);
   assert(door.moving);
-  door.update(16201);
+  door.update(16251);
 
   door.command(DoorAction::Open, 17000);
   door.command(DoorAction::Close, 17020);
   door.update(17970);
   assert(door.open && door.moving && !door.opening);
-  door.update(18520);
+  door.update(18570);
   assert(!door.open && !door.moving);
 
   door.command(DoorAction::Open, 20000);
@@ -69,7 +69,7 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 25970);
   assert(door.moving && !door.opening);
-  door.update(26520);
+  door.update(26570);
   assert(!door.open && !door.moving && door.pwm == 0);
 
   const uint32_t start = UINT32_MAX - 100;
@@ -79,7 +79,7 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, uint32_t(start + 5970));
   assert(door.moving && !door.opening);
-  door.update(uint32_t(start + 6520));
+  door.update(uint32_t(start + 6570));
   assert(!door.open && !door.moving);
 
   ProximityController proximity;
@@ -107,7 +107,7 @@ int main() {
   assert(proximity.sample(-90, action) && action == DoorAction::ProximityClose);
   assert(proximity.interval() == 1000);
   automatic.command(action, 1000);
-  automatic.update(1550);
+  automatic.update(1600);
   assert(!automatic.open && !automatic.moving);
   automatic.command(action, 1600);
   assert(!automatic.moving);
