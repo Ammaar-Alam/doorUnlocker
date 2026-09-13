@@ -54,6 +54,10 @@ Opening runs a calibrated 970 ms stroke; releasing runs for 500 ms. Each Open or
 
 There is no position sensor: status describes the controller’s state, not whether the physical door is shut. Start with the string released and watch the first powered cycle.
 
+## iPhone app
+
+The [iOS app](ios/README.md) combines the website controls with native Bluetooth reconnection and live diagnostics. Open `ios/DoorOpener.xcodeproj` in Xcode. It supports iPhone on iOS 17 or later.
+
 ## iPhone shortcut
 
 In Shortcuts, send `POST /open`, wait five seconds, then send `POST /close`. Supply the door password with each request when authentication is required.

@@ -81,6 +81,13 @@ test("door API and shared status", async t => {
   });
   await delay(50);
   assert.equal(cloudReads, 0, "No background cloud polling without viewers");
+  assert.equal((await request("/api/diagnostics")).status, 401, "Diagnostics remain private outside protected hours");
+  const diagnosticsLogin = await post("/login", { password: process.env.PASSWORD });
+  const { token: diagnosticsToken } = await diagnosticsLogin.json();
+  const diagnostics = await request("/api/diagnostics", { headers: { Authorization: `Bearer ${diagnosticsToken}` } });
+  assert.equal(diagnostics.status, 200);
+  assert.deepEqual(await diagnostics.json(), { telemetry: null, receivedAt: null });
+  assert.equal(cloudReads, 0, "Diagnostics only read the MQTT snapshot");
 
   for (const path of ["/open", "/close", "/command", "/emergency-close", "/api/open", "/force-open", "/force-close"]) {
     const response = await post(path, { command: "open" });

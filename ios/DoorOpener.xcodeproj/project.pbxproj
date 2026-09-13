@@ -1,0 +1,225 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0000000000000000000000C8 /* BluetoothConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000064 /* BluetoothConnection.swift */; };
+		0000000000000000000000C9 /* DoorWebsite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000065 /* DoorWebsite.swift */; };
+		0000000000000000000000CA /* DoorOpenerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000066 /* DoorOpenerApp.swift */; };
+		0000000000000000000000CB /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000067 /* DiagnosticsView.swift */; };
+		0000000000000000000000CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000068 /* Assets.xcassets */; };
+		0000000000000000000000CD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000006A /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000006 /* DoorOpener.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = DoorOpener.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000064 /* BluetoothConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothConnection.swift; sourceTree = "<group>"; };
+		000000000000000000000065 /* DoorWebsite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoorWebsite.swift; sourceTree = "<group>"; };
+		000000000000000000000066 /* DoorOpenerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoorOpenerApp.swift; sourceTree = "<group>"; };
+		000000000000000000000067 /* DiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
+		000000000000000000000068 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		000000000000000000000069 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		00000000000000000000006A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000003 /* DoorOpener */,
+				000000000000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 /* DoorOpener */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000064 /* BluetoothConnection.swift */,
+				000000000000000000000065 /* DoorWebsite.swift */,
+				000000000000000000000066 /* DoorOpenerApp.swift */,
+				000000000000000000000067 /* DiagnosticsView.swift */,
+				000000000000000000000068 /* Assets.xcassets */,
+				000000000000000000000069 /* Info.plist */,
+				00000000000000000000006A /* PrivacyInfo.xcprivacy */,
+			);
+			path = DoorOpener;
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000006 /* DoorOpener.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000005 /* DoorOpener */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000015 /* Build configuration list for PBXNativeTarget "DoorOpener" */;
+			buildPhases = (
+				000000000000000000000007 /* Sources */,
+				000000000000000000000008 /* Frameworks */,
+				000000000000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DoorOpener;
+			productName = DoorOpener;
+			productReference = 000000000000000000000006 /* DoorOpener.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = 000000000000000000000014 /* Build configuration list for PBXProject "DoorOpener" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000005 /* DoorOpener */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0000000000000000000000CC /* Assets.xcassets in Resources */,
+				0000000000000000000000CD /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0000000000000000000000C8 /* BluetoothConnection.swift in Sources */,
+				0000000000000000000000C9 /* DoorWebsite.swift in Sources */,
+				0000000000000000000000CA /* DoorOpenerApp.swift in Sources */,
+				0000000000000000000000CB /* DiagnosticsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		00000000000000000000001E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		00000000000000000000001F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		000000000000000000000020 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VM6477A6M8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DoorOpener/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ammaaralam.DoorOpener;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		000000000000000000000021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VM6477A6M8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DoorOpener/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ammaaralam.DoorOpener;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000000000000000000000014 /* Build configuration list for PBXProject "DoorOpener" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00000000000000000000001E /* Debug */,
+				00000000000000000000001F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000015 /* Build configuration list for PBXNativeTarget "DoorOpener" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000020 /* Debug */,
+				000000000000000000000021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}
