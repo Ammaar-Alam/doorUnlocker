@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function request(path, options = {}) {
     const response = await fetch(path, {
       ...options, headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(15000),
+      signal: options.signal ?? AbortSignal.timeout(15000),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -84,10 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fallbackTimer = null;
   }
 
-  async function getDoorStatus() {
+  async function getDoorStatus(signal) {
     const revision = ++statusRevision;
     try {
-      const data = await request('/status');
+      const data = await request('/status', { signal });
       if (revision === statusRevision) applyDoorState(data);
     } catch {
       if (revision === statusRevision) applyDoorState({});
@@ -178,11 +178,13 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await request('/command', { method: 'POST', body: JSON.stringify({ command }) });
       const deadline = performance.now() + 12000;
-      do {
-        await getDoorStatus();
+      while (performance.now() < deadline) {
+        const remaining = Math.max(1, Math.ceil(deadline - performance.now()));
+        await getDoorStatus(AbortSignal.timeout(remaining));
+        if (performance.now() >= deadline) break;
         if (doorOpen === target && lastUpdatedAt && lastUpdatedAt !== previousUpdate) return;
-        await new Promise(resolve => setTimeout(resolve, 250));
-      } while (performance.now() < deadline);
+        await new Promise(resolve => setTimeout(resolve, Math.min(250, deadline - performance.now())));
+      }
       commandUnconfirmed = true;
       showError('Command sent, but completion was not confirmed. Check the handle before retrying.');
     } catch (error) {
