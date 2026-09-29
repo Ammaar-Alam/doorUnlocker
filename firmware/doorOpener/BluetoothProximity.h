@@ -36,7 +36,7 @@ Peer *findPeer(const esp_bd_addr_t address) {
 }
 
 class Connections : public BLEServerCallbacks {
-  void onConnect(BLEServer *, esp_ble_gatts_cb_param_t *event) override {
+  void onConnect(BLEServer *server, esp_ble_gatts_cb_param_t *event) override {
     bool accepted = false;
     portENTER_CRITICAL(&lock);
     Peer *slot = nullptr;
@@ -62,6 +62,8 @@ class Connections : public BLEServerCallbacks {
     advertise = true;
     portEXIT_CRITICAL(&lock);
     if (!accepted) esp_ble_gap_disconnect(event->connect.remote_bda);
+    // 30 to 45 ms intervals and a 6 second timeout
+    else server->updateConnParams(event->connect.remote_bda, 24, 36, 0, 600);
   }
 
   void onDisconnect(BLEServer *, esp_ble_gatts_cb_param_t *event) override {
@@ -179,12 +181,13 @@ void task(void *) {
       for (unsigned i = 0; i < PROXIMITY_PHONE_LIMIT; ++i) {
         const auto &peer = current[i];
         if (!peer.connected || !peer.authenticated) continue;
+        const int steady = peer.arrival.steady();
+        const bool reading = steady > -127 && uint32_t(now - polls[i].lastGoodAt) < 3000;
         char rssi[8] = "null";
-        if (peer.rssi >= -127 && peer.rssi <= 20 && uint32_t(now - polls[i].lastGoodAt) < 3000 &&
-            polls[i].lastGoodAt == peer.sampledAt) snprintf(rssi, sizeof(rssi), "%d", peer.rssi);
+        if (reading) snprintf(rssi, sizeof(rssi), "%d", steady);
         used += snprintf(report.json + used, sizeof(report.json) - used,
           "%s{\"slot\":%u,\"rssi\":%s,\"near\":%s}", first ? "" : ",", i + 1, rssi,
-          (strcmp(rssi, "null") != 0 && peer.rssi >= -65) ? "true" : "false");
+          reading && steady >= -65 ? "true" : "false");
         first = false;
       }
       snprintf(report.json + used, sizeof(report.json) - used, "]}");
@@ -204,7 +207,6 @@ void begin(QueueHandle_t motorCommands) {
   telemetry = xQueueCreate(1, sizeof(Telemetry));
   BLEDevice::init("Ammaar's Door Opener");
   BLEDevice::setSecurityCallbacks(&securityCallbacks);
-  BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_MITM);
   BLEDevice::setCustomGapHandler(onGap);
   passkey = 100000 + esp_random() % 900000;
   BLESecurity security;
@@ -215,6 +217,8 @@ void begin(QueueHandle_t motorCommands) {
   server->setCallbacks(&connections);
   BLEService *service = server->createService(BLEUUID(uint16_t(0x180A)));
   auto *model = service->createCharacteristic(BLEUUID(uint16_t(0x2A24)), BLECharacteristic::PROPERTY_READ);
+  // phones encrypt with their saved bond when reading this and the stack erases a bond if a
+  // board initiated security request is cut off by a dropped link so never send one
   model->setAccessPermissions(ESP_GATT_PERM_READ_ENC_MITM);
   model->setValue("Door Opener");
   service->start();

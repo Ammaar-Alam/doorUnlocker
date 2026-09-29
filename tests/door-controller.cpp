@@ -26,18 +26,18 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 5970);
   assert(door.moving && !door.opening);
-  for (uint32_t t = 5970; t < 6520; ++t) {
+  for (uint32_t t = 5970; t < 6658; ++t) {
     door.update(t);
     assert(door.moving && !door.opening);
     assert(door.pwm >= 0 && door.pwm <= PWM_CLOSE_TARGET);
   }
-  door.update(6520);
+  door.update(6658);
   assert(!door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 6600);
   assert(door.moving && !door.opening);
-  door.update(7149);
+  door.update(7287);
   assert(door.moving);
-  door.update(7150);
+  door.update(7288);
   assert(!door.moving);
 
   door.command(DoorAction::Open, 7300);
@@ -58,7 +58,7 @@ int main() {
   door.command(DoorAction::Close, 17020);
   door.update(17970);
   assert(door.open && door.moving && !door.opening);
-  door.update(18570);
+  door.update(18658);
   assert(!door.open && !door.moving);
 
   door.command(DoorAction::Open, 20000);
@@ -69,7 +69,7 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 25970);
   assert(door.moving && !door.opening);
-  door.update(26520);
+  door.update(26658);
   assert(!door.open && !door.moving && door.pwm == 0);
 
   const uint32_t start = UINT32_MAX - 100;
@@ -79,7 +79,7 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, uint32_t(start + 5970));
   assert(door.moving && !door.opening);
-  door.update(uint32_t(start + 6520));
+  door.update(uint32_t(start + 6658));
   assert(!door.open && !door.moving);
 
   const uint8_t owner[6] = {1, 2, 3, 4, 5, 6};
@@ -134,6 +134,35 @@ int main() {
   proximity.sample(-90, 72000);
   assert(proximity.interval() == 1000);
 
+  // weak readings must not delay confirmation beyond the arrival window
+  ProximityController noisy;
+  noisy.connection(true, 0);
+  noisy.connection(false, 10);
+  noisy.connection(true, 15010);
+  uint32_t sampledAt = 16000;
+  bool arrived = false;
+  for (int i = 0; i < 10 && !arrived; ++i) {
+    arrived = noisy.sample(i % 2 ? -98 : -8, sampledAt);
+    sampledAt += noisy.interval();
+  }
+  assert(arrived);
+  assert(!noisy.sample(-8, sampledAt));
+  noisy.sample(-98, sampledAt + 100);
+  assert(noisy.interval() == 1000);
+
+  // reported signal holds the recent peak through deep fades
+  ProximityController steady;
+  steady.connection(true, 0);
+  steady.sample(-45, 100);
+  for (uint32_t t = 200; t < 1900; t += 100) steady.sample(t % 200 ? -100 : -60, t);
+  assert(steady.steady() == -45);
+  steady.sample(-100, 2100);
+  assert(steady.steady() == -60);
+  steady.sample(-90, 5000);
+  assert(steady.steady() == -90);
+  steady.connection(false, 5100);
+  assert(steady.steady() == -127);
+
   ProximityController other;
   other.connection(true, 0);
   other.connection(false, 1);
@@ -160,9 +189,9 @@ int main() {
   automatic.update(4970);
   assert(automatic.moving && !automatic.opening);
   automatic.command(DoorAction::ProximityOpen, 5000);
-  automatic.update(5519);
+  automatic.update(5657);
   assert(automatic.moving);
-  automatic.update(5520);
+  automatic.update(5658);
   assert(!automatic.open && !automatic.moving);
   automatic.update(20000);
   assert(!automatic.moving);
@@ -178,12 +207,12 @@ int main() {
   automatic.update(36000);
   assert(automatic.open && !automatic.moving);
   automatic.command(DoorAction::Close, 37000);
-  automatic.update(37550);
+  automatic.update(37688);
   automatic.command(DoorAction::ProximityOpen, 38000);
   automatic.command(DoorAction::Close, 38100);
   automatic.update(38970);
   assert(automatic.moving && !automatic.opening);
-  automatic.update(39520);
+  automatic.update(39658);
   automatic.update(45000);
   assert(!automatic.open && !automatic.moving);
 
@@ -194,6 +223,6 @@ int main() {
   assert(automatic.open && !automatic.moving);
   automatic.update(uint32_t(start + 5000));
   assert(automatic.moving && !automatic.opening);
-  automatic.update(uint32_t(start + 5550));
+  automatic.update(uint32_t(start + 5688));
   assert(!automatic.open && !automatic.moving);
 }
