@@ -65,7 +65,7 @@ A known phone arms after at least **15 seconds continuously disconnected**. Afte
 
 Each remembered phone gets one automatic opening per arrival. Brief reconnects preserve an armed arrival but clear its pending reading; staying connected or fluctuations in RSSI cannot rearm it. The controller remembers up to four phone addresses resolved by the Bluetooth stack. Startup, newly seen phones, and replaced slots begin disarmed and need a connection followed by a 15-second absence. Arrival state is kept in RAM, so restarting the controller resets it.
 
-An automatic opening completes the 970 ms stroke, holds with motor power off for **four seconds**, then releases for **688 ms**, regardless of subsequent RSSI or disconnection. Arrivals during an existing movement or while already open share that opening and do not repeat or extend it. Manual commands take precedence and cancel the automatic release; manual Open stays held until an explicit Close.
+An automatic opening completes the 970 ms stroke, holds with motor power off for **four seconds**, then releases for **620 ms**, regardless of subsequent RSSI or disconnection. Arrivals during an existing movement or while already open share that opening and do not repeat or extend it. Manual commands take precedence and cancel the automatic release; manual Open stays held until an explicit Close.
 
 `doorTelemetry` reports a compact snapshot every 500 ms while phones are connected, on connection-count changes, and once per minute when none are connected. Each paired phone has a slot number, RSSI, and near flag (RSSI at or above −65 dBm). The reported RSSI is the strongest reading from the last one to two seconds; fading, body blocking, and Wi-Fi sharing the radio only pull individual readings down, often by 30 dB or more. Arrival detection still uses individual readings. Slot numbers can be reused for newly seen phones. A null RSSI indicates no valid current reading. The connected count includes phones still pairing. The existing Arduino Cloud MQTT subscription writes these snapshots to the server log with the prefix `Bluetooth RSSI:`. Network delays can reduce the observed update rate; motor decisions never wait for telemetry delivery.
 
@@ -77,7 +77,7 @@ RSSI is not a distance or door-position sensor. A connection loss lasting 15 sec
 
 ## Timing and string adjustment
 
-`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 688 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A manual opening stays held until a Close command arrives; BLE arrivals use the four-second hold described above.
+`DoorController.h` contains the motor power and timing calibration. Opening takes 970 ms and releasing takes 620 ms. A separate ESP32 task controls the motor, so WiFi and cloud calls cannot extend a powered stroke. Each stroke completes even if the network disconnects. A manual opening stays held until a Close command arrives; BLE arrivals use the four-second hold described above.
 
 Each Open or Close received while idle runs a full stroke, regardless of the reported position. The controller completes a stroke before reversing so a partially wound string is not followed by a full release stroke. Force Open/Close also run a full stroke while idle and are ignored during movement.
 

@@ -30,7 +30,7 @@ struct DoorControlsView: View {
                     }
                     .rotationEffect(.degrees(drawnOpen ? -38 : 0), anchor: .trailing)
                     .offset(x: 24)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: drawnOpen ? 0.97 : 0.688), value: drawnOpen)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: drawnOpen ? 0.97 : 0.62), value: drawnOpen)
                 }
                 .frame(maxWidth: .infinity).frame(height: 260)
                 .accessibilityHidden(true)
