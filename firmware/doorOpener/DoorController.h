@@ -11,9 +11,9 @@ constexpr uint32_t OPEN_RAMP2_MS = 60;
 constexpr uint32_t OPEN_CRUISE_MS = 600;
 constexpr uint32_t OPEN_SOFT_STOP_MS = 120;
 constexpr int PWM_CLOSE_TARGET = 100;
-constexpr uint32_t CLOSE_RAMP_UP_MS = 125;
-constexpr uint32_t CLOSE_HOLD_MS = 438;
-constexpr uint32_t CLOSE_RAMP_DOWN_MS = 125;
+constexpr uint32_t CLOSE_RAMP_UP_MS = 110;
+constexpr uint32_t CLOSE_HOLD_MS = 400;
+constexpr uint32_t CLOSE_RAMP_DOWN_MS = 110;
 
 enum class DoorAction { Open, Close, ForceOpen, ForceClose, ProximityOpen };
 
