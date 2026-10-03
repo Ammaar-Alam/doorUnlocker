@@ -26,18 +26,18 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 5970);
   assert(door.moving && !door.opening);
-  for (uint32_t t = 5970; t < 6658; ++t) {
+  for (uint32_t t = 5970; t < 6590; ++t) {
     door.update(t);
     assert(door.moving && !door.opening);
     assert(door.pwm >= 0 && door.pwm <= PWM_CLOSE_TARGET);
   }
-  door.update(6658);
+  door.update(6590);
   assert(!door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 6600);
   assert(door.moving && !door.opening);
-  door.update(7287);
+  door.update(7219);
   assert(door.moving);
-  door.update(7288);
+  door.update(7220);
   assert(!door.moving);
 
   door.command(DoorAction::Open, 7300);
@@ -58,7 +58,7 @@ int main() {
   door.command(DoorAction::Close, 17020);
   door.update(17970);
   assert(door.open && door.moving && !door.opening);
-  door.update(18658);
+  door.update(18590);
   assert(!door.open && !door.moving);
 
   door.command(DoorAction::Open, 20000);
@@ -69,7 +69,7 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, 25970);
   assert(door.moving && !door.opening);
-  door.update(26658);
+  door.update(26590);
   assert(!door.open && !door.moving && door.pwm == 0);
 
   const uint32_t start = UINT32_MAX - 100;
@@ -79,7 +79,7 @@ int main() {
   assert(door.open && !door.moving && door.pwm == 0);
   door.command(DoorAction::Close, uint32_t(start + 5970));
   assert(door.moving && !door.opening);
-  door.update(uint32_t(start + 6658));
+  door.update(uint32_t(start + 6590));
   assert(!door.open && !door.moving);
 
   const uint8_t owner[6] = {1, 2, 3, 4, 5, 6};
@@ -189,9 +189,9 @@ int main() {
   automatic.update(4970);
   assert(automatic.moving && !automatic.opening);
   automatic.command(DoorAction::ProximityOpen, 5000);
-  automatic.update(5657);
+  automatic.update(5589);
   assert(automatic.moving);
-  automatic.update(5658);
+  automatic.update(5590);
   assert(!automatic.open && !automatic.moving);
   automatic.update(20000);
   assert(!automatic.moving);
@@ -207,12 +207,12 @@ int main() {
   automatic.update(36000);
   assert(automatic.open && !automatic.moving);
   automatic.command(DoorAction::Close, 37000);
-  automatic.update(37688);
+  automatic.update(37620);
   automatic.command(DoorAction::ProximityOpen, 38000);
   automatic.command(DoorAction::Close, 38100);
   automatic.update(38970);
   assert(automatic.moving && !automatic.opening);
-  automatic.update(39658);
+  automatic.update(39590);
   automatic.update(45000);
   assert(!automatic.open && !automatic.moving);
 
@@ -223,6 +223,6 @@ int main() {
   assert(automatic.open && !automatic.moving);
   automatic.update(uint32_t(start + 5000));
   assert(automatic.moving && !automatic.opening);
-  automatic.update(uint32_t(start + 5688));
+  automatic.update(uint32_t(start + 5620));
   assert(!automatic.open && !automatic.moving);
 }
